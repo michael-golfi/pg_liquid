@@ -1,0 +1,218 @@
+set client_min_messages = warning;
+drop extension if exists pg_liquid cascade;
+create extension pg_liquid;
+select count(*) as seeded_claim_count
+from liquid.query($$
+DefPred("onto/preferred_label", "1", "liquid/node", "0", "liquid/string").
+DefPred("onto/subclass_of", "0", "liquid/node", "0", "liquid/node").
+DefPred("onto/instance_of", "0", "liquid/node", "0", "liquid/node").
+DefPred("meta/compound_subject_class", "0", "liquid/node", "0", "liquid/node").
+
+DefCompound("UserSignal", "user", "0", "liquid/node").
+DefCompound("UserSignal", "intent", "0", "liquid/string").
+DefCompound("UserSignal", "value", "0", "liquid/string").
+DefCompound("UserSignal", "source", "0", "liquid/string").
+Edge("UserSignal", "liquid/mutable", "false").
+
+DefCompound("AgentExtraction", "user", "0", "liquid/node").
+DefCompound("AgentExtraction", "fact_key", "0", "liquid/string").
+DefCompound("AgentExtraction", "fact_value", "0", "liquid/string").
+DefCompound("AgentExtraction", "agent", "0", "liquid/node").
+DefCompound("AgentExtraction", "thread", "0", "liquid/node").
+Edge("AgentExtraction", "liquid/mutable", "false").
+
+DefCompound("OntologyClaim", "user", "0", "liquid/node").
+DefCompound("OntologyClaim", "subject", "0", "liquid/node").
+DefCompound("OntologyClaim", "predicate", "0", "liquid/node").
+DefCompound("OntologyClaim", "object", "0", "liquid/node").
+DefCompound("OntologyClaim", "author", "0", "liquid/node").
+DefCompound("OntologyClaim", "source", "0", "liquid/node").
+DefCompound("OntologyClaim", "confidence", "0", "liquid/string").
+Edge("OntologyClaim", "liquid/mutable", "false").
+
+CompoundReadByRole@(compound_type="UserSignal", role="user").
+CompoundReadByRole@(compound_type="AgentExtraction", role="user").
+CompoundReadByRole@(compound_type="OntologyClaim", role="user").
+
+Edge("session:alice-app", "liquid/acts_for", "user:alice").
+Edge("session:bob-app", "liquid/acts_for", "user:bob").
+Edge("session:alice-agent", "liquid/acts_for", "agent:extractor:alice").
+Edge("agent:extractor:alice", "liquid/acts_for", "user:alice").
+Edge("session:bob-agent", "liquid/acts_for", "agent:extractor:bob").
+Edge("agent:extractor:bob", "liquid/acts_for", "user:bob").
+
+Edge("class/Thing", "onto/preferred_label", "Thing").
+Edge("class/User", "onto/subclass_of", "class/Thing").
+Edge("class/Artifact", "onto/subclass_of", "class/Thing").
+Edge("class/Document", "onto/subclass_of", "class/Artifact").
+Edge("class/ApiReference", "onto/subclass_of", "class/Document").
+Edge("concept/api_reference", "onto/instance_of", "class/ApiReference").
+Edge("concept/design_note", "onto/instance_of", "class/Document").
+Edge("concept/api_reference", "onto/preferred_label", "API reference").
+Edge("concept/design_note", "onto/preferred_label", "Design note").
+
+Edge("UserSignal", "meta/compound_subject_class", "class/User").
+Edge("AgentExtraction", "meta/compound_subject_class", "class/User").
+Edge("OntologyClaim", "meta/compound_subject_class", "class/Artifact").
+
+UserSignal@(user="user:alice", intent="goal", value="improve_docs", source="chat").
+UserSignal@(user="user:bob", intent="goal", value="reduce_incidents", source="chat").
+
+AgentExtraction@(user="user:alice", fact_key="preferred_format", fact_value="checklist", agent="agent:extractor:alice", thread="thread:alice:1").
+AgentExtraction@(user="user:bob", fact_key="focus_area", fact_value="authentication", agent="agent:extractor:bob", thread="thread:bob:1").
+
+OntologyClaim@(user="user:alice", subject="concept/api_reference", predicate="onto/has_property", object="property/authoritative", author="agent:extractor:alice", source="thread:alice:1", confidence="0.88").
+OntologyClaim@(user="user:alice", subject="concept/design_note", predicate="onto/has_property", object="property/change_tracked", author="user:alice", source="thread:alice:2", confidence="0.93").
+OntologyClaim@(user="user:bob", subject="concept/design_note", predicate="onto/has_property", object="property/reviewed", author="agent:extractor:bob", source="thread:bob:1", confidence="0.84").
+
+OntologyClaim@(cid=cid, user=user_id, subject=subject_id, predicate=predicate_id, object=object_id, author=author_id, source=source_id, confidence=confidence)?
+$$) as t(cid text, user_id text, subject_id text, predicate_id text, object_id text, author_id text, source_id text, confidence text);
+ seeded_claim_count 
+--------------------
+                  3
+(1 row)
+
+select compound_type, role
+from liquid.query($$
+CompoundReadByRole@(cid=cid, compound_type=compound_type, role=role)?
+$$) as t(cid text, compound_type text, role text)
+where compound_type in ('UserSignal', 'AgentExtraction', 'OntologyClaim')
+order by 1, 2;
+  compound_type  | role 
+-----------------+------
+ AgentExtraction | user
+ OntologyClaim   | user
+ UserSignal      | user
+(3 rows)
+
+select compound_type, subject_class
+from liquid.query($$
+Edge(compound_type, "meta/compound_subject_class", subject_class)?
+$$) as t(compound_type text, subject_class text)
+where compound_type in ('UserSignal', 'AgentExtraction', 'OntologyClaim')
+order by 1, 2;
+  compound_type  | subject_class  
+-----------------+----------------
+ AgentExtraction | class/User
+ OntologyClaim   | class/Artifact
+ UserSignal      | class/User
+(3 rows)
+
+select count(*) as alice_agent_extraction_count
+from liquid.query_as('session:alice-agent', $$
+AgentExtraction@(user="user:alice", fact_key="preferred_channel", fact_value="async_updates", agent="agent:extractor:alice", thread="thread:alice:2").
+AgentExtraction@(cid=cid, user=user_id, fact_key=fact_key, fact_value=fact_value, agent=agent_id, thread=thread_id)?
+$$) as t(cid text, user_id text, fact_key text, fact_value text, agent_id text, thread_id text)
+where user_id = 'user:alice';
+ alice_agent_extraction_count 
+------------------------------
+                            1
+(1 row)
+
+select count(*) as alice_user_signal_count
+from liquid.query_as('session:alice-app', $$
+UserSignal@(user="user:alice", intent="preference", value="short_status_updates", source="chat").
+UserSignal@(cid=cid, user=user_id, intent=intent, value=value, source=source)?
+$$) as t(cid text, user_id text, intent text, value text, source text)
+where user_id = 'user:alice';
+ alice_user_signal_count 
+-------------------------
+                       1
+(1 row)
+
+select user_id, intent, value
+from liquid.read_as('session:alice-app', $$
+UserSignal@(cid=cid, user=user_id, intent=intent, value=value, source=source)?
+$$) as t(cid text, user_id text, intent text, value text, source text)
+order by 1, 2, 3;
+  user_id   |   intent   |        value         
+------------+------------+----------------------
+ user:alice | goal       | improve_docs
+ user:alice | preference | short_status_updates
+(2 rows)
+
+select count(*) as bob_reads_alice_signal_count
+from liquid.read_as('session:bob-app', $$
+UserSignal@(cid=cid, user="user:alice", intent=intent, value=value, source=source)?
+$$) as t(cid text, intent text, value text, source text);
+ bob_reads_alice_signal_count 
+------------------------------
+                            0
+(1 row)
+
+select fact_key, fact_value, agent_id
+from liquid.read_as('session:alice-app', $$
+AgentExtraction@(cid=cid, user="user:alice", fact_key=fact_key, fact_value=fact_value, agent=agent_id, thread=thread_id)?
+$$) as t(cid text, fact_key text, fact_value text, agent_id text, thread_id text)
+order by 1, 2, 3;
+     fact_key      |  fact_value   |       agent_id        
+-------------------+---------------+-----------------------
+ preferred_channel | async_updates | agent:extractor:alice
+ preferred_format  | checklist     | agent:extractor:alice
+(2 rows)
+
+select count(*) as bob_reads_alice_extraction_count
+from liquid.read_as('session:bob-app', $$
+AgentExtraction@(cid=cid, user="user:alice", fact_key=fact_key, fact_value=fact_value, agent=agent_id, thread=thread_id)?
+$$) as t(cid text, fact_key text, fact_value text, agent_id text, thread_id text);
+ bob_reads_alice_extraction_count 
+----------------------------------
+                                0
+(1 row)
+
+select subject_id, predicate_id, object_id, author_id, confidence
+from liquid.read_as('session:alice-app', $$
+OntologyClaim@(cid=cid, user="user:alice", subject=subject_id, predicate=predicate_id, object=object_id, author=author_id, source=source_id, confidence=confidence)?
+$$) as t(cid text, subject_id text, predicate_id text, object_id text, author_id text, source_id text, confidence text)
+order by 1, 2, 3, 4, 5;
+      subject_id       |   predicate_id    |        object_id        |       author_id       | confidence 
+-----------------------+-------------------+-------------------------+-----------------------+------------
+ concept/api_reference | onto/has_property | property/authoritative  | agent:extractor:alice | 0.88
+ concept/design_note   | onto/has_property | property/change_tracked | user:alice            | 0.93
+(2 rows)
+
+select subject_id, predicate_id, object_id, author_id, confidence
+from liquid.read_as('session:bob-app', $$
+OntologyClaim@(cid=cid, user="user:bob", subject=subject_id, predicate=predicate_id, object=object_id, author=author_id, source=source_id, confidence=confidence)?
+$$) as t(cid text, subject_id text, predicate_id text, object_id text, author_id text, source_id text, confidence text)
+order by 1, 2, 3, 4, 5;
+     subject_id      |   predicate_id    |     object_id     |      author_id      | confidence 
+---------------------+-------------------+-------------------+---------------------+------------
+ concept/design_note | onto/has_property | property/reviewed | agent:extractor:bob | 0.84
+(1 row)
+
+select inferred_type
+from liquid.query($$
+TypeOf(x, t) :- Edge(x, "onto/instance_of", t).
+TypeOf(x, sup) :- TypeOf(x, t), Edge(t, "onto/subclass_of", sup).
+TypeOf("concept/api_reference", inferred_type)?
+$$) as t(inferred_type text)
+order by 1;
+   inferred_type    
+--------------------
+ class/ApiReference
+ class/Artifact
+ class/Document
+ class/Thing
+(4 rows)
+
+select subject_id, label, inferred_type
+from liquid.query($$
+TypeOf(x, t) :- Edge(x, "onto/instance_of", t).
+TypeOf(x, sup) :- TypeOf(x, t), Edge(t, "onto/subclass_of", sup).
+GraphNode(x, label, t) :- Edge(x, "onto/preferred_label", label), TypeOf(x, t).
+GraphNode(x, label, t)?
+$$) as t(subject_id text, label text, inferred_type text)
+where subject_id in ('concept/api_reference', 'concept/design_note')
+order by 1, 2, 3;
+      subject_id       |     label     |   inferred_type    
+-----------------------+---------------+--------------------
+ concept/api_reference | API reference | class/ApiReference
+ concept/api_reference | API reference | class/Artifact
+ concept/api_reference | API reference | class/Document
+ concept/api_reference | API reference | class/Thing
+ concept/design_note   | Design note   | class/Artifact
+ concept/design_note   | Design note   | class/Document
+ concept/design_note   | Design note   | class/Thing
+(7 rows)
+

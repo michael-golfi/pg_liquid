@@ -1,0 +1,12 @@
+*.o
+*.dylib
+*.bc
+dist/
+node_modules/
+results/
+regression.*
+log/
+tmp_check*/
+output_iso/
+release/
+.bench/

@@ -1,0 +1,198 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  installcheck:
+    runs-on: ubuntu-22.04
+    env:
+      PG_MAJOR: '16'
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Install PostgreSQL Toolchain
+        run: bash scripts/setup_ci_postgres.sh
+
+      - name: Validate Package Metadata
+        run: make package-check
+
+      - name: Run Installcheck
+        run: |
+          sudo env \
+            PATH="$PATH" \
+            PG_CONFIG="$PG_CONFIG" \
+            PGHOST="$PGHOST" \
+            PGPORT="$PGPORT" \
+            PGUSER="$PGUSER" \
+            PGPASSWORD="$PGPASSWORD" \
+            PGDATABASE="$PGDATABASE" \
+            make installcheck
+
+      - name: Run Vitest Suite
+        run: npm test
+
+      - name: Upload Regression Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installcheck-logs
+          path: |
+            dist/regression.diffs
+            dist/regression.out
+            dist/results
+
+  benchmarks:
+    needs: installcheck
+    runs-on: ubuntu-22.04
+    env:
+      PG_MAJOR: '16'
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Install PostgreSQL Toolchain
+        run: bash scripts/setup_ci_postgres.sh
+
+      - name: Run Benchmark Check
+        run: |
+          sudo env \
+            PATH="$PATH" \
+            PG_CONFIG="$PG_CONFIG" \
+            PGHOST="$PGHOST" \
+            PGPORT="$PGPORT" \
+            PGUSER="$PGUSER" \
+            PGPASSWORD="$PGPASSWORD" \
+            PGDATABASE="$PGDATABASE" \
+            BENCH_DB="pg_liquid_release_bench" \
+            OUTPUT_FILE="$GITHUB_WORKSPACE/bench_metrics.tsv" \
+            make bench-check
+          sudo chown "$USER:$USER" "$GITHUB_WORKSPACE/bench_metrics.tsv"
+
+      - name: Run Benchmark Shape Test
+        run: npm run test:bench-shape
+
+      - name: Upload Benchmark Metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-metrics
+          path: bench_metrics.tsv
+
+  package-and-publish:
+    needs: benchmarks
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Resolve Release Version
+        run: |
+          meta_version="$(node -p "require('./META.json').version")"
+          package_version="$(node -p "require('./package.json').version")"
+          control_version="$(sed -nE "s/^default_version[[:space:]]*=[[:space:]]*'([^']+)'.*/\\1/p" pg_liquid.control)"
+          if [[ -z "$control_version" ]]; then
+            echo "missing default_version in pg_liquid.control" >&2
+            exit 1
+          fi
+          if [[ "$meta_version" != "$package_version" || "$meta_version" != "$control_version" ]]; then
+            echo "version mismatch: META=${meta_version} package=${package_version} control=${control_version}" >&2
+            exit 1
+          fi
+          release_version="$meta_version"
+          echo "RELEASE_VERSION=${release_version}" >> "$GITHUB_ENV"
+          if git ls-remote --exit-code --tags origin "refs/tags/v${release_version}" >/dev/null 2>&1; then
+            echo "SHOULD_PUBLISH=0" >> "$GITHUB_ENV"
+          else
+            echo "SHOULD_PUBLISH=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Skip Existing Release
+        if: env.SHOULD_PUBLISH == '0'
+        run: echo "Release tag v${RELEASE_VERSION} already exists; skipping publish."
+
+      - name: Validate Package Metadata
+        if: env.SHOULD_PUBLISH == '1'
+        run: make package-check
+
+      - name: Build PGXN Archive
+        if: env.SHOULD_PUBLISH == '1'
+        run: make pgxn-package
+
+      - name: Create Release Tag
+        if: env.SHOULD_PUBLISH == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${RELEASE_VERSION}" -m "Release v${RELEASE_VERSION}"
+          git push origin "v${RELEASE_VERSION}"
+
+      - name: Publish To PGXN
+        if: env.SHOULD_PUBLISH == '1'
+        env:
+          PGXN_USERNAME: ${{ secrets.PGXN_USERNAME }}
+          PGXN_PASSWORD: ${{ secrets.PGXN_PASSWORD }}
+        run: |
+          archive_path="$(find release -maxdepth 1 -type f -name '*.tar.gz' | head -n 1)"
+          if [[ -z "$archive_path" ]]; then
+            echo "missing release archive" >&2
+            exit 1
+          fi
+          bash scripts/publish_pgxn_release.sh "$archive_path"
+
+      - name: Upload Release Artifacts
+        if: env.SHOULD_PUBLISH == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pg-liquid-release
+          path: |
+            release/*.tar.gz
+
+      - name: Publish GitHub Release
+        if: env.SHOULD_PUBLISH == '1'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.RELEASE_VERSION }}
+          target_commitish: ${{ github.sha }}
+          files: |
+            release/*.tar.gz

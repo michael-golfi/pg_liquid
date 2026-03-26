@@ -1,0 +1,282 @@
+drop extension if exists pg_liquid cascade;
+drop table if exists public.film_performances;
+drop table if exists public.no_primary_key_films;
+create extension pg_liquid;
+
+create table public.film_performances (
+  id bigint generated always as identity primary key,
+  actor_name text,
+  role_name text,
+  film_title text
+);
+
+insert into public.film_performances (actor_name, role_name, film_title)
+values
+  ('Harrison Ford', 'Han Solo', 'Star Wars'),
+  ('Carrie Fisher', 'Leia Organa', 'Star Wars');
+
+do $$
+begin
+  perform *
+  from liquid.query($liquid$
+DefCompound("FilmPerf", "actor", "0", "liquid/node").
+DefCompound("FilmPerf", "role", "0", "liquid/node").
+DefCompound("FilmPerf", "film", "0", "liquid/node").
+Edge("FilmPerf", "liquid/mutable", "false").
+$liquid$) as t(ignored text);
+exception
+  when invalid_parameter_value then
+    null;
+end $$;
+
+do $$
+begin
+  perform liquid.create_row_normalizer(
+    'public.film_performances'::regclass,
+    'film_perf',
+    'FilmPerf',
+    '{"actor":"actor_name","film":"film_title","role":"role_name"}'::jsonb
+  );
+end $$;
+
+select cid,
+       actor,
+       role,
+       film
+from liquid.query($$
+FilmPerf@(cid=cid, actor=actor, role=role, film=film)?
+$$) as t(cid text, actor text, role text, film text)
+order by 1;
+
+insert into public.film_performances (actor_name, role_name, film_title)
+values ('Mark Hamill', 'Luke Skywalker', 'Star Wars');
+
+select count(*) as projected_compound_count_after_insert
+from liquid.query($$
+FilmPerf@(cid=cid, actor=actor, role=role, film=film)?
+$$) as t(cid text, actor text, role text, film text);
+
+insert into public.film_performances (actor_name, role_name, film_title)
+values ('Mark Hamill', 'Luke Skywalker', 'Star Wars');
+
+select count(*) as duplicate_compound_count
+from liquid.query($$
+FilmPerf@(cid=cid, actor=actor, role=role, film=film)?
+$$) as t(cid text, actor text, role text, film text)
+where cid = liquid.compound_identity_literal(
+  'FilmPerf',
+  '{"actor":"Mark Hamill","film":"Star Wars","role":"Luke Skywalker"}'::jsonb
+);
+
+select count(*) as duplicate_binding_edge_count
+from liquid.row_normalizer_bindings
+where normalizer_id = (
+    select id
+    from liquid.row_normalizers
+    where normalizer_name = 'film_perf'
+  )
+  and subject_literal = liquid.compound_identity_literal(
+    'FilmPerf',
+    '{"actor":"Mark Hamill","film":"Star Wars","role":"Luke Skywalker"}'::jsonb
+  );
+
+update public.film_performances
+set role_name = 'General Leia'
+where actor_name = 'Carrie Fisher';
+
+select count(*) as old_carrie_compound_count
+from liquid.query($$
+FilmPerf@(cid=cid, actor="Carrie Fisher", role="Leia Organa", film="Star Wars")?
+$$) as t(cid text);
+
+select count(*) as new_carrie_compound_count
+from liquid.query($$
+FilmPerf@(cid=cid, actor="Carrie Fisher", role="General Leia", film="Star Wars")?
+$$) as t(cid text);
+
+update public.film_performances
+set role_name = null
+where actor_name = 'Carrie Fisher';
+
+select count(*) as carrie_compound_count_after_null
+from liquid.query($$
+FilmPerf@(cid=cid, actor="Carrie Fisher", role=role, film="Star Wars")?
+$$) as t(cid text, role text);
+
+delete from public.film_performances
+where id = (
+  select min(id)
+  from public.film_performances
+  where actor_name = 'Mark Hamill'
+);
+
+select count(*) as luke_compound_count_after_first_delete
+from liquid.query($$
+FilmPerf@(cid=cid, actor="Mark Hamill", role="Luke Skywalker", film="Star Wars")?
+$$) as t(cid text);
+
+delete from public.film_performances
+where actor_name = 'Mark Hamill';
+
+select count(*) as luke_compound_count_after_second_delete
+from liquid.query($$
+FilmPerf@(cid=cid, actor="Mark Hamill", role="Luke Skywalker", film="Star Wars")?
+$$) as t(cid text);
+
+do $$
+begin
+  begin
+    perform liquid.create_row_normalizer(
+      'public.film_performances'::regclass,
+      'bad_role',
+      'FilmPerf',
+      '{"actor":"actor_name","film":"film_title","wrong":"role_name"}'::jsonb,
+      false
+    );
+    raise exception 'expected invalid role mapping failure';
+  exception
+    when raise_exception then
+      raise notice 'invalid role mapping rejected';
+  end;
+
+  begin
+    perform liquid.create_row_normalizer(
+      'public.film_performances'::regclass,
+      'bad_column',
+      'FilmPerf',
+      '{"actor":"actor_name","film":"film_title","role":"missing_column"}'::jsonb,
+      false
+    );
+    raise exception 'expected invalid column mapping failure';
+  exception
+    when raise_exception then
+      raise notice 'invalid column mapping rejected';
+  end;
+end $$;
+
+create table public.no_primary_key_films (
+  actor_name text,
+  role_name text,
+  film_title text
+);
+
+do $$
+begin
+  begin
+    perform liquid.create_row_normalizer(
+      'public.no_primary_key_films'::regclass,
+      'no_pk',
+      'FilmPerf',
+      '{"actor":"actor_name","film":"film_title","role":"role_name"}'::jsonb,
+      false
+    );
+    raise exception 'expected missing primary key failure';
+  exception
+    when raise_exception then
+      raise notice 'missing primary key rejected';
+  end;
+end $$;
+
+do $$
+begin
+  begin
+    perform liquid.create_row_normalizer(
+      'public.film_performances'::regclass,
+      'bad_json_type',
+      'FilmPerf',
+      '[]'::jsonb,
+      false
+    );
+    raise exception 'expected non-object role_columns failure';
+  exception
+    when raise_exception then
+      raise notice 'non-object role_columns rejected';
+  end;
+
+  begin
+    perform liquid.create_row_normalizer(
+      'public.film_performances'::regclass,
+      'film_perf',
+      'FilmPerf',
+      '{"actor":"actor_name","film":"film_title","role":"role_name"}'::jsonb,
+      false
+    );
+    raise exception 'expected duplicate normalizer failure';
+  exception
+    when raise_exception then
+      raise notice 'duplicate normalizer rejected';
+  end;
+
+  begin
+    perform liquid.rebuild_row_normalizer(
+      'public.film_performances'::regclass,
+      'missing_normalizer'
+    );
+    raise exception 'expected missing normalizer rebuild failure';
+  exception
+    when raise_exception then
+      raise notice 'missing normalizer rebuild rejected';
+  end;
+
+  begin
+    perform liquid.drop_row_normalizer(
+      'public.film_performances'::regclass,
+      'missing_normalizer'
+    );
+    raise exception 'expected missing normalizer drop failure';
+  exception
+    when raise_exception then
+      raise notice 'missing normalizer drop rejected';
+  end;
+end $$;
+
+do $$
+declare
+  compound_id bigint;
+  role_id bigint;
+begin
+  select id into compound_id
+  from liquid.vertices
+  where literal = liquid.compound_identity_literal(
+    'FilmPerf',
+    '{"actor":"Harrison Ford","film":"Star Wars","role":"Han Solo"}'::jsonb
+  );
+
+  select id into role_id
+  from liquid.vertices
+  where literal = 'role';
+
+  update liquid.edges
+     set is_deleted = true
+   where subject_id = compound_id
+     and predicate_id = role_id;
+end $$;
+
+select count(*) as harrison_compound_count_after_manual_tombstone
+from liquid.query($$
+FilmPerf@(cid=cid, actor="Harrison Ford", role="Han Solo", film="Star Wars")?
+$$) as t(cid text);
+
+do $$
+begin
+  perform liquid.rebuild_row_normalizer(
+    'public.film_performances'::regclass,
+    'film_perf'
+  );
+end $$;
+
+select count(*) as harrison_compound_count_after_rebuild
+from liquid.query($$
+FilmPerf@(cid=cid, actor="Harrison Ford", role="Han Solo", film="Star Wars")?
+$$) as t(cid text);
+
+do $$
+begin
+  perform liquid.drop_row_normalizer(
+    'public.film_performances'::regclass,
+    'film_perf'
+  );
+end $$;
+
+select count(*) as remaining_binding_count_after_drop
+from liquid.row_normalizer_bindings;

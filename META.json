@@ -1,0 +1,49 @@
+{
+  "name": "pg_liquid",
+  "abstract": "LIquid-inspired Datalog graph query extension for PostgreSQL",
+  "description": "pg_liquid brings LIquid-style graph querying, assertions, recursive closure, compounds, and row normalizers to PostgreSQL as a native extension.",
+  "version": "0.1.0",
+  "maintainer": [
+    "Michael Golfi <michael.golfi@gmail.com>"
+  ],
+  "license": [
+    "mit"
+  ],
+  "provides": {
+    "pg_liquid": {
+      "file": "sql/pg_liquid--0.1.0.sql",
+      "docfile": "README.md",
+      "version": "0.1.0",
+      "abstract": "LIquid-inspired Datalog graph query extension for PostgreSQL"
+    }
+  },
+  "prereqs": {
+    "runtime": {
+      "requires": {
+        "PostgreSQL": "16.0.0"
+      }
+    }
+  },
+  "resources": {
+    "homepage": "https://github.com/michael-golfi/pg_liquid",
+    "repository": {
+      "url": "ssh://git@github.com/michael-golfi/pg_liquid.git",
+      "web": "https://github.com/michael-golfi/pg_liquid",
+      "type": "git"
+    },
+    "bugtracker": {
+      "web": "https://github.com/michael-golfi/pg_liquid/issues"
+    }
+  },
+  "tags": [
+    "postgresql",
+    "extension",
+    "graph",
+    "datalog",
+    "liquid"
+  ],
+  "meta-spec": {
+    "version": "1.0.0",
+    "url": "https://pgxn.org/spec/"
+  }
+}

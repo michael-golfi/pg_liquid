@@ -1,0 +1,2 @@
+-- pg_liquid 1.2 -> 1.2.0
+-- Semantic-version alias release; no schema changes.
