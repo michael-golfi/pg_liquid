@@ -1,0 +1,2 @@
+-- pg_liquid 0.1.5 -> 0.1.6
+-- Release version bump; no schema changes.
