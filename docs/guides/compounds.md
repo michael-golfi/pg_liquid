@@ -58,5 +58,5 @@ Compounds are still graph data:
 
 ## Next
 
-- [Build an ontology](/guides/ontologies)
-- [Use CLS and principal scopes](/guides/security)
+- [Build an ontology](./ontologies.md)
+- [Use CLS and principal scopes](./security.md)

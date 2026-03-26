@@ -83,5 +83,5 @@ order by 1, 2;
 
 ## Next
 
-- [Model compounds](/guides/compounds)
-- [Build an ontology](/guides/ontologies)
+- [Model compounds](./compounds.md)
+- [Build an ontology](./ontologies.md)

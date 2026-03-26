@@ -72,5 +72,5 @@ order by 1;
 
 ## Next
 
-- [Query a graph](/guides/query-graphs)
-- [Model compounds](/guides/compounds)
+- [Query a graph](../guides/query-graphs.md)
+- [Model compounds](../guides/compounds.md)

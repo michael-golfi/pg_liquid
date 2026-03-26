@@ -68,6 +68,6 @@ $$) as t(subject text, predicate text, object text);
 
 ## 7. Next Steps
 
-- [Create your first graph](/getting-started/first-graph)
-- [Query a graph](/guides/query-graphs)
-- [Upgrade and operate](/guides/operations)
+- [Create your first graph](./first-graph.md)
+- [Query a graph](../guides/query-graphs.md)
+- [Upgrade and operate](../guides/operations.md)

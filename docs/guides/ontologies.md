@@ -85,5 +85,5 @@ $$) as t(subject text, predicate text, object text, confidence text);
 
 ## Next
 
-- [Use row normalizers](/guides/normalizers)
-- [Use security and principal scopes](/guides/security)
+- [Use row normalizers](./normalizers.md)
+- [Use security and principal scopes](./security.md)

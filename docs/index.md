@@ -20,10 +20,10 @@ It is built for teams that want to:
 
 ## Start Here
 
-1. [Install pg_liquid](/getting-started/install)
-2. [Create your first graph](/getting-started/first-graph)
-3. [Query a graph](/guides/query-graphs)
-4. [Build an ontology](/guides/ontologies)
+1. [Install pg_liquid](./getting-started/install.md)
+2. [Create your first graph](./getting-started/first-graph.md)
+3. [Query a graph](./guides/query-graphs.md)
+4. [Build an ontology](./guides/ontologies.md)
 
 ## Compatibility
 
@@ -42,9 +42,9 @@ liquid.rebuild_row_normalizer(source_table regclass, normalizer_name text)
 
 ## Learn by Task
 
-- [I want to model simple graph edges](/getting-started/first-graph)
-- [I want to query paths and recursive reachability](/guides/query-graphs)
-- [I want typed records and role-based modeling](/guides/compounds)
-- [I want a real ontology vocabulary](/guides/ontologies)
-- [I want PostgreSQL tables to feed LIquid compounds](/guides/normalizers)
-- [I want principal-aware reads](/guides/security)
+- [I want to model simple graph edges](./getting-started/first-graph.md)
+- [I want to query paths and recursive reachability](./guides/query-graphs.md)
+- [I want typed records and role-based modeling](./guides/compounds.md)
+- [I want a real ontology vocabulary](./guides/ontologies.md)
+- [I want PostgreSQL tables to feed LIquid compounds](./guides/normalizers.md)
+- [I want principal-aware reads](./guides/security.md)
