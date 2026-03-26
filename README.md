@@ -3,6 +3,10 @@
 `pg_liquid` is a PostgreSQL extension that maps the LIquid blog language and
 data model onto native PostgreSQL storage and execution.
 
+Documentation site:
+
+- GitHub Pages: `https://michael-golfi.github.io/pg_liquid/`
+
 It ships:
 
 - `liquid.query(program text)`
@@ -61,6 +65,7 @@ Alias scripts are also included for the legacy non-semver version names `1.0`,
 Useful local checks:
 
 ```sh
+npm run docs:build
 make package-check
 make installcheck
 make bench-check
@@ -77,4 +82,6 @@ install script. `pgxn-package` builds a release tarball under `release/`.
 - [src](./src)
 - [tests](./tests)
 
-The operational rollout details live in [docs/08_OPERATIONS.md](./docs/08_OPERATIONS.md).
+The primary documentation experience now lives in the VitePress site under
+[docs](./docs). The operational rollout details also remain available in
+[docs/08_OPERATIONS.md](./docs/08_OPERATIONS.md).

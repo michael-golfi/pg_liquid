@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "docs:build": "vitepress build docs",
+    "docs:dev": "vitepress dev docs",
+    "docs:preview": "vitepress preview docs",
     "test": "vitest run",
     "test:bench-shape": "vitest run tests/bench/benchmark-representativeness.test.ts"
   },
@@ -13,6 +16,7 @@
   "devDependencies": {
     "@types/node": "^24.5.2",
     "typescript": "^5.9.2",
+    "vitepress": "^1.6.4",
     "vitest": "^3.2.4"
   }
 }

@@ -52,7 +52,7 @@ The legacy built-in policy edges are still supported for compatibility:
 
 Examples:
 
-```liquid
+```txt
 PredicateReadBySubject@(predicate="name", relation="owner").
 PredicateReadByObject@(predicate="member_of", relation="member").
 CompoundReadByRole@(compound_type="Email", role="user").
@@ -73,7 +73,7 @@ With `set pg_liquid.policy_principal = 'user:bob'`, the executor will allow:
 
 If `agent:support_bot` acts for `user:alice`:
 
-```liquid
+```txt
 Edge("agent:support_bot", "liquid/acts_for", "user:alice").
 ```
 

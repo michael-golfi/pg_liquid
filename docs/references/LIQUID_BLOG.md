@@ -186,7 +186,7 @@ As notation, this is cumbersome. Syntax alone is a solvable problem. However, no
 
 LIquid uses a cost-based dynamic query evaluator, based on constraint satisfaction applied to a graph of edge-constraints. In this context, "dynamic" means that the query plan is not known when evaluation starts. In a traditional SQL query evaluator, the query plan (a tree of relational algebra operators) is completely determined before evaluation starts. In contrast, LIquid's evaluator establishes path consistency of the result subgraph by repeatedly satisfying the cheapest remaining constraint. For cost computations, the evaluator relies heavily on constant-time access to set sizes in the index. We'll describe the query evaluator in more detail in an upcoming paper; for now, let's just say that we think that the performance problems traditionally associated with a relational graph data model are tractable. This leaves us needing only a relational query language with a succinct, composable syntax. Like this, perhaps:
 
-```datalog
+```txt
 FOAF(a, b, c) :-  % Friend of a Friend
   Edge(a, "knows", b),
   Edge(b, "knows", c).
@@ -204,7 +204,7 @@ This is Datalog, a subset of the logic programming language Prolog. The above qu
 
 Now we have an in-memory relational database with hash-based indexes and Datalog as a query language, with a dynamic query planner based on constraint satisfaction. Are we done yet? Not quite. Relative to object-graphs or SQL, we lack schema. All values are just strings. Worse, we have no way to insist that certain relationships be unique—for example, that an entity should have just one name. Without enforced uniqueness, there's no way to map a graph into a normalized table. Consider:
 
-```datalog
+```txt
 People(id, n, dob) :-
   Edge(id, "name", n),
   Edge(id, "date_of_birth", dob).
@@ -214,7 +214,7 @@ Generally, people have one name and one birthday. For this query, a single table
 
 Now, we could describe a predicate as follows:
 
-```datalog
+```txt
 TypeAndCardinality(e, type, cardinality) :-
   Edge(e, "liquid/type", type),
   Edge(e, "liquid/cardinality", cardinality).
@@ -232,7 +232,7 @@ DefPred("name",
 
 We say "could" because it is a bit awkward to ask the user to define extra identities for the subject and object metadata, "name_sub" and "name_obj". This will be fixed presently. Scalar types such as liquid/node, liquid/string, or liquid/int determine parsing rules with which the corresponding identity must comply for the write to succeed. Identities can and do serve multiple purposes:
 
-```datalog
+```txt
 Edge("book:1", "isbn", "9783161484100").  % an identifier
 Edge("attribute:1", "count", "9783161484100").  % an integer
 Edge("alien:1", "name", "9783161484100").  % a string
@@ -246,7 +246,7 @@ Edge(_, p, "9783161484100"),  % just string-valued things
 
 As in the above example, the user is expected to disambiguate in the query if need be. The database implementation is free to exploit type information, for example by sorted or quantized indexing or immediate storage of small integers. While many relationships are naturally represented as a subject-predicate-object triple: mother, name, author, there are also many which are not, like an employment tenure (person, company, start date), or an actor's film performance (actor, role, film). For ternary relationships, we could force them into the existing Edge by making one of the vertices do double duty as a predicate: "Harrison Ford Han-Solo'd in Star Wars," but this is a one-off hack that doesn't generalize to n-ary relationships. A graph data model should allow arbitrary n-ary "compound edges" to behave just like simple edges, as unique relationships which either exist or do not. Given that edges can be used blithely, it is tempting to start on a solution by building n-ary relationships out of edges:
 
-```datalog
+```txt
 FilmPerf(x, a, r, f) :-
   Edge(x, "actor", a),
   Edge(x, "role", r),
@@ -257,7 +257,7 @@ FilmPerf("x", "Harrison Ford", "Han Solo", "Star Wars").
 
 With pointer-like index performance, the extra hop should not be a performance problem. However, the need to fabricate an identity of the hub node, "x", is a problem. In particular, if the user simply creates arbitrary hub identities, the FilmPerf assertion does not behave like an Edge assertion. Duplicate FilmPerf compound edges could occur. However, if we choose a systematic encoding for the hub node, say something like "actor:Harrison Ford,film:Star Wars,role:Han Solo", FilmPerf assertions will have the same identity semantics as edges. To allow the database implementation to do this encoding for us, we introduce compound graph schema: a systematic way of expressing relative identities. A compound is specified by some meta-structure which indicates that a set of predicates is used to generate a relative identity: The subject side of the predicate always refers to the relative identity, the "compound hub." The object side is specified by the user. For convenience, a compound definition implicitly generates a corresponding rule with a reserved @-suffix. Here's what the FilmPerf compound actually looks like:
 
-```datalog
+```txt
 DefCompound(compound, predicate, object_cardinality, object_type) :-
   DefPred(predicate, "1", "liquid/node", object_cardinality, object_type),
   Edge(compound, "liquid/compound_predicate", predicate).
@@ -279,7 +279,7 @@ FilmPerf@(cid=x, actor="Harrison Ford", role="Han Solo", film="Star Wars"),
 
 Notice that we can use the generated relative identity, cid, just like any other node. Here, we indicate that this film performance was a breakthrough. In tabular relational terms, a compound edge behaves exactly like a compound primary key. Since compounds are known to the database implementation, the database is free to optimize compound relationships. In fact, a simple generalization of the index structures described in the start of this writing will allow compound edges and attributes which refer to them to be accessed as fast as atomic Edges. The database implementation can optimize away the extra hop. Effectively, we get the expressiveness and performance of a property graph without the need for the user to define or operate on properties specially. Instances of FilmPerf behave "like vertexes" in that edges can refer to them, and "like edges" in that they can be deleted. Sometimes we need compound relationships that only behave "like vertexes." We just want a scalar value with some queryable internal structure:
 
-```datalog
+```txt
 DefCompound("Email", "user", "0", "liquid/string").
 DefCompound("Email", "domain", "0", "liquid/string").
 Edge("Email", "liquid/mutable", "false"),
@@ -290,7 +290,7 @@ Email@(cid=x, account="root" domain="xyzzy.com"),
 
 Such vertex-compounds allow us to encode arbitrary tree structures directly in graph data, which is fully accessible to the same Datalog query machinery used on an ordinary graph. Generally, compounds define "relative identity," a notion which turns out to be surprisingly useful. In particular, we use it to define "the subject side" and "the object side" of an edge in predicate schema. The real definition of DefPred looks something like this:
 
-```datalog
+```txt
 DefCompound("Ometa", "liquid/object_meta", "1", "liquid/node")
 Edge("Ometa", "liquid/mutable", "false").
 
