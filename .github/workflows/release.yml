@@ -16,6 +16,9 @@ on:
           - minor
           - major
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 permissions:
   contents: write
 
@@ -35,12 +38,12 @@ jobs:
       PG_MAJOR: ${{ matrix.pg_major }}
     steps:
       - name: Check Out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
       - name: Set Up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.3.0
         with:
           node-version: '20'
 
@@ -70,7 +73,7 @@ jobs:
 
       - name: Upload Regression Logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: installcheck-logs-pg${{ matrix.pg_major }}
           path: |
@@ -86,12 +89,12 @@ jobs:
       PG_MAJOR: '16'
     steps:
       - name: Check Out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
       - name: Set Up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.3.0
         with:
           node-version: '20'
 
@@ -120,7 +123,7 @@ jobs:
         run: npm run test:bench-shape
 
       - name: Upload Benchmark Metrics
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: bench-metrics
           path: bench_metrics.tsv
@@ -131,12 +134,12 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check Out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
       - name: Set Up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.3.0
         with:
           node-version: '20'
 
@@ -188,14 +191,14 @@ jobs:
           bash scripts/publish_pgxn_release.sh "$archive_path"
 
       - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: pg-liquid-release
           path: |
             release/*.tar.gz
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.6.1
         with:
           tag_name: v${{ env.RELEASE_VERSION }}
           files: |
