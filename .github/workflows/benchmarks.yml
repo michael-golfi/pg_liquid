@@ -1,0 +1,49 @@
+name: Benchmarks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bench-check:
+    runs-on: ubuntu-22.04
+    env:
+      PG_MAJOR: '16'
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v4
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Install PostgreSQL Toolchain
+        run: bash scripts/setup_ci_postgres.sh
+
+      - name: Run Benchmark Check
+        run: |
+          sudo env \
+            PATH="$PATH" \
+            PG_CONFIG="$PG_CONFIG" \
+            PGHOST="$PGHOST" \
+            PGPORT="$PGPORT" \
+            PGUSER="$PGUSER" \
+            PGPASSWORD="$PGPASSWORD" \
+            PGDATABASE="$PGDATABASE" \
+            BENCH_DB="pg_liquid_bench_ci" \
+            OUTPUT_FILE="$GITHUB_WORKSPACE/bench_metrics.tsv" \
+            make bench-check
+          sudo chown "$USER:$USER" "$GITHUB_WORKSPACE/bench_metrics.tsv"
+
+      - name: Run Benchmark Shape Test
+        run: npm run test:bench-shape
+
+      - name: Upload Benchmark Metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-metrics
+          path: bench_metrics.tsv

@@ -1,0 +1,128 @@
+drop extension if exists pg_liquid cascade;
+create extension pg_liquid;
+select count(*) as seeded_context_count
+from liquid.query($$
+DefCompound("UserProfile", "user", "0", "liquid/string").
+DefCompound("UserProfile", "display_name", "0", "liquid/string").
+DefCompound("UserProfile", "timezone", "0", "liquid/string").
+Edge("UserProfile", "liquid/mutable", "false").
+
+DefCompound("PreferenceMemory", "user", "0", "liquid/string").
+DefCompound("PreferenceMemory", "key", "0", "liquid/string").
+DefCompound("PreferenceMemory", "value", "0", "liquid/string").
+Edge("PreferenceMemory", "liquid/mutable", "false").
+
+DefCompound("ConversationContext", "user", "0", "liquid/string").
+DefCompound("ConversationContext", "topic", "0", "liquid/string").
+DefCompound("ConversationContext", "summary", "0", "liquid/string").
+Edge("ConversationContext", "liquid/mutable", "false").
+
+CompoundReadByRole@(compound_type="UserProfile", role="user").
+CompoundReadByRole@(compound_type="PreferenceMemory", role="user").
+CompoundReadByRole@(compound_type="ConversationContext", role="user").
+
+Edge("session:alice-mobile", "liquid/acts_for", "agent:memory-proxy:alice").
+Edge("agent:memory-proxy:alice", "liquid/acts_for", "user:alice").
+Edge("session:bob-mobile", "liquid/acts_for", "user:bob").
+
+UserProfile@(user="user:alice", display_name="Alice Example", timezone="America/Toronto").
+UserProfile@(user="user:bob", display_name="Bob Example", timezone="America/Chicago").
+
+PreferenceMemory@(user="user:alice", key="summary_style", value="concise").
+PreferenceMemory@(user="user:alice", key="notification_channel", value="email").
+PreferenceMemory@(user="user:bob", key="focus_area", value="reliability").
+
+ConversationContext@(user="user:alice", topic="release_planning", summary="Prefers concise status updates").
+ConversationContext@(user="user:bob", topic="incident_review", summary="Tracks morning handoff").
+
+ConversationContext@(cid=cid, user=user_id, topic=topic, summary=summary)?
+$$) as t(cid text, user_id text, topic text, summary text);
+ seeded_context_count 
+----------------------
+                    2
+(1 row)
+
+select user_id,
+       display_name,
+       timezone
+from liquid.read_as('session:alice-mobile', $$
+UserProfile@(cid=cid, user=user_id, display_name=display_name, timezone=timezone)?
+$$) as t(cid text, user_id text, display_name text, timezone text)
+order by 1, 2, 3;
+  user_id   | display_name  |    timezone     
+------------+---------------+-----------------
+ user:alice | Alice Example | America/Toronto
+(1 row)
+
+select user_id,
+       topic,
+       summary
+from liquid.read_as('session:alice-mobile', $$
+ConversationContext@(cid=cid, user=user_id, topic=topic, summary=summary)?
+$$) as t(cid text, user_id text, topic text, summary text)
+order by 1, 2, 3;
+  user_id   |      topic       |            summary             
+------------+------------------+--------------------------------
+ user:alice | release_planning | Prefers concise status updates
+(1 row)
+
+select memory_key,
+       memory_value
+from liquid.read_as('session:alice-mobile', $$
+PreferenceMemory@(user="user:alice", key=memory_key, value=memory_value)?
+$$) as t(memory_key text, memory_value text)
+order by 1, 2;
+      memory_key      | memory_value 
+----------------------+--------------
+ notification_channel | email
+ summary_style        | concise
+(2 rows)
+
+select count(*) as hidden_preference_value_edges
+from liquid.read_as('session:alice-mobile', $$
+Edge(subject_literal, "value", object_literal)?
+$$) as t(subject_literal text, object_literal text);
+ hidden_preference_value_edges 
+-------------------------------
+                             0
+(1 row)
+
+select count(*) as alice_visible_bob_profile_count
+from liquid.read_as('session:alice-mobile', $$
+UserProfile@(cid=cid, user="user:bob", display_name=display_name, timezone=timezone)?
+$$) as t(cid text, display_name text, timezone text);
+ alice_visible_bob_profile_count 
+---------------------------------
+                               0
+(1 row)
+
+select user_id,
+       topic,
+       summary
+from liquid.read_as('session:bob-mobile', $$
+ConversationContext@(cid=cid, user=user_id, topic=topic, summary=summary)?
+$$) as t(cid text, user_id text, topic text, summary text)
+order by 1, 2, 3;
+ user_id  |      topic      |        summary         
+----------+-----------------+------------------------
+ user:bob | incident_review | Tracks morning handoff
+(1 row)
+
+select count(*) as untrusted_profile_count
+from liquid.read_as('session:untrusted', $$
+UserProfile@(cid=cid, user=user_id, display_name=display_name, timezone=timezone)?
+$$) as t(cid text, user_id text, display_name text, timezone text);
+ untrusted_profile_count 
+-------------------------
+                       0
+(1 row)
+
+select count(*) as unscoped_preference_count
+from liquid.query($$
+PreferenceMemory@(cid=cid, user=user_id, key=memory_key, value=memory_value)?
+$$) as t(cid text, user_id text, memory_key text, memory_value text);
+ unscoped_preference_count 
+---------------------------
+                         3
+(1 row)
+

@@ -1,0 +1,198 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semantic version bump to apply before publishing
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  installcheck:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-22.04
+    env:
+      PG_MAJOR: '16'
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Install PostgreSQL Toolchain
+        run: bash scripts/setup_ci_postgres.sh
+
+      - name: Validate Package Metadata
+        run: make package-check
+
+      - name: Run Installcheck
+        run: |
+          sudo env \
+            PATH="$PATH" \
+            PG_CONFIG="$PG_CONFIG" \
+            PGHOST="$PGHOST" \
+            PGPORT="$PGPORT" \
+            PGUSER="$PGUSER" \
+            PGPASSWORD="$PGPASSWORD" \
+            PGDATABASE="$PGDATABASE" \
+            make installcheck
+
+      - name: Run Vitest Suite
+        run: npm test
+
+      - name: Upload Regression Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installcheck-logs
+          path: |
+            dist/regression.diffs
+            dist/regression.out
+            dist/results
+
+  benchmarks:
+    if: github.actor != 'github-actions[bot]'
+    needs: installcheck
+    runs-on: ubuntu-22.04
+    env:
+      PG_MAJOR: '16'
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Install PostgreSQL Toolchain
+        run: bash scripts/setup_ci_postgres.sh
+
+      - name: Run Benchmark Check
+        run: |
+          sudo env \
+            PATH="$PATH" \
+            PG_CONFIG="$PG_CONFIG" \
+            PGHOST="$PGHOST" \
+            PGPORT="$PGPORT" \
+            PGUSER="$PGUSER" \
+            PGPASSWORD="$PGPASSWORD" \
+            PGDATABASE="$PGDATABASE" \
+            BENCH_DB="pg_liquid_release_bench" \
+            OUTPUT_FILE="$GITHUB_WORKSPACE/bench_metrics.tsv" \
+            make bench-check
+          sudo chown "$USER:$USER" "$GITHUB_WORKSPACE/bench_metrics.tsv"
+
+      - name: Run Benchmark Shape Test
+        run: npm run test:bench-shape
+
+      - name: Upload Benchmark Metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-metrics
+          path: bench_metrics.tsv
+
+  package-and-publish:
+    if: github.actor != 'github-actions[bot]'
+    needs: benchmarks
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Bump Release Version
+        run: |
+          bump_type="${{ github.event.inputs.bump }}"
+          if [[ -z "$bump_type" ]]; then
+            bump_type="patch"
+          fi
+          release_version="$(node scripts/bump_release_version.mjs "$bump_type")"
+          echo "RELEASE_VERSION=${release_version}" >> "$GITHUB_ENV"
+          if git ls-remote --exit-code --tags origin "refs/tags/v${release_version}" >/dev/null 2>&1; then
+            echo "release tag v${release_version} already exists after bump" >&2
+            exit 1
+          fi
+
+      - name: Commit Release Version Bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add META.json package.json package-lock.json pg_liquid.control Changes.md Makefile sql scripts/bump_release_version.mjs
+          git commit -m "chore(release): v${RELEASE_VERSION} [skip ci]"
+          git push origin HEAD:main
+
+      - name: Validate Package Metadata
+        run: make package-check
+
+      - name: Build PGXN Archive
+        run: make pgxn-package
+
+      - name: Create Release Tag
+        run: |
+          git tag -a "v${RELEASE_VERSION}" -m "Release v${RELEASE_VERSION}"
+          git push origin "v${RELEASE_VERSION}"
+
+      - name: Publish To PGXN
+        env:
+          PGXN_USERNAME: ${{ secrets.PGXN_USERNAME }}
+          PGXN_PASSWORD: ${{ secrets.PGXN_PASSWORD }}
+        run: |
+          archive_path="$(find release -maxdepth 1 -type f -name '*.tar.gz' | head -n 1)"
+          if [[ -z "$archive_path" ]]; then
+            echo "missing release archive" >&2
+            exit 1
+          fi
+          bash scripts/publish_pgxn_release.sh "$archive_path"
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pg-liquid-release
+          path: |
+            release/*.tar.gz
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.RELEASE_VERSION }}
+          files: |
+            release/*.tar.gz

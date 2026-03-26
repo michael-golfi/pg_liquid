@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  installcheck:
+    runs-on: ubuntu-22.04
+    env:
+      PG_MAJOR: '16'
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v4
+
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Install PostgreSQL Toolchain
+        run: bash scripts/setup_ci_postgres.sh
+
+      - name: Validate PGXN Metadata
+        run: make package-check
+
+      - name: Run Installcheck
+        run: |
+          sudo env \
+            PATH="$PATH" \
+            PG_CONFIG="$PG_CONFIG" \
+            PGHOST="$PGHOST" \
+            PGPORT="$PGPORT" \
+            PGUSER="$PGUSER" \
+            PGPASSWORD="$PGPASSWORD" \
+            PGDATABASE="$PGDATABASE" \
+            make installcheck
+
+      - name: Run Vitest Suite
+        run: npm test
+
+      - name: Upload Regression Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installcheck-logs
+          path: |
+            dist/regression.diffs
+            dist/regression.out
+            dist/results

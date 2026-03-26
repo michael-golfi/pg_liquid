@@ -1,0 +1,192 @@
+create extension pg_liquid;
+\t on
+select proname
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'liquid'
+  and p.proname in (
+    'compound_identity_literal',
+    'create_row_normalizer',
+    'drop_row_normalizer',
+    'project_compound_edges',
+    'query',
+    'rebuild_row_normalizer',
+    'tg_apply_row_normalizer'
+  )
+order by proname;
+ compound_identity_literal
+ create_row_normalizer
+ drop_row_normalizer
+ project_compound_edges
+ query
+ rebuild_row_normalizer
+ tg_apply_row_normalizer
+
+select count(*) as legacy_function_count
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'liquid'
+  and p.proname in (
+    'query_subgraph',
+    'insert_edge',
+    'delete_edge',
+    'assert_rule',
+    'insert_compound',
+    'get_compound_id',
+    'define_predicate',
+    'define_compound',
+    'set_predicate_policy'
+  );
+                     0
+
+\t off
+select a,
+       b,
+       c,
+       d,
+       e
+from liquid.query($$
+Edge("a1", "knows", "b1").
+Edge("a1", "knows", "b2").
+Edge("b1", "knows", "c1").
+Edge("b2", "knows", "c1").
+Edge("c1", "skilled_at", "java").
+Edge("c1", "skilled_at", "C++").
+Edge("c1", "worked_for", "IBM").
+Edge("c1", "worked_for", "Oracle").
+
+FOAF(a, b, c) :-
+  Edge(a, "knows", b),
+  Edge(b, "knows", c).
+
+EmployerSkills(e, c, d) :-
+  Edge(c, "worked_for", e),
+  Edge(c, "skilled_at", d).
+
+SkillsEmployersFOAF(a, b, c, d, e) :-
+  FOAF(a, b, c),
+  EmployerSkills(e, c, d).
+
+SkillsEmployersFOAF(a, b, c, d, e)?
+$$) as t(a text, b text, c text, d text, e text)
+order by 1, 2, 3, 4, 5;
+ a  | b  | c  |  d   |   e    
+----+----+----+------+--------
+ a1 | b1 | c1 | C++  | IBM
+ a1 | b1 | c1 | C++  | Oracle
+ a1 | b1 | c1 | java | IBM
+ a1 | b1 | c1 | java | Oracle
+ a1 | b2 | c1 | C++  | IBM
+ a1 | b2 | c1 | C++  | Oracle
+ a1 | b2 | c1 | java | IBM
+ a1 | b2 | c1 | java | Oracle
+(8 rows)
+
+select p as predicate_name,
+       sc as subject_cardinality,
+       st as subject_type,
+       oc as object_cardinality,
+       ot as object_type
+from liquid.query($$
+DefPred("name", "1", "liquid/node", "0", "liquid/string").
+DefPred(p, sc, st, oc, ot)?
+$$) as t(p text, sc text, st text, oc text, ot text)
+where p = 'name';
+ predicate_name | subject_cardinality | subject_type | object_cardinality |  object_type  
+----------------+---------------------+--------------+--------------------+---------------
+ name           | 1                   | liquid/node  | 0                  | liquid/string
+(1 row)
+
+select p as predicate_name,
+       om as object_meta
+from liquid.query($$
+DefPred("count", "1", "liquid/node", "0", "liquid/int").
+DefPred("name", "1", "liquid/node", "0", "liquid/string").
+Edge("book:1", "isbn", "9783161484100").
+Edge("attribute:1", "count", "9783161484100").
+Edge("alien:1", "name", "9783161484100").
+Edge(_, p, "9783161484100"),
+  Edge(p, "liquid/object_meta", om),
+  Edge(om, "liquid/type", "liquid/string")?
+$$) as t(p text, om text)
+order by 1;
+ predicate_name |            object_meta            
+----------------+-----------------------------------
+ name           | Ometa@(liquid/object_meta='name')
+(1 row)
+
+select cid,
+       actor,
+       role,
+       film
+from liquid.query($$
+DefCompound("FilmPerf", "actor", "0", "liquid/node").
+DefCompound("FilmPerf", "role", "0", "liquid/node").
+DefCompound("FilmPerf", "film", "0", "liquid/node").
+FilmPerf@(cid=x, actor="Harrison Ford", role="Han Solo", film="Star Wars"),
+  Edge(x, "type", "breakthrough performance").
+FilmPerf@(cid=cid, actor=actor, role=role, film=film)?
+$$) as t(cid text, actor text, role text, film text)
+order by 1;
+                                 cid                                 |     actor     |   role   |   film    
+---------------------------------------------------------------------+---------------+----------+-----------
+ FilmPerf@(actor='Harrison Ford', film='Star Wars', role='Han Solo') | Harrison Ford | Han Solo | Star Wars
+(1 row)
+
+select p as predicate_name,
+       st as subject_type,
+       sc as subject_cardinality,
+       ot as object_type,
+       oc as object_cardinality
+from liquid.query($$
+DefPred("worked_for", "1", "liquid/node", "0", "liquid/node").
+Smeta@(cid=sm, liquid/subject_meta=p),
+  TypeAndCardinality(sm, st, sc),
+  Ometa@(cid=om, liquid/object_meta=p),
+  TypeAndCardinality(om, ot, oc)?
+$$) as t(sm text, p text, st text, sc text, om text, ot text, oc text)
+where p = 'worked_for';
+ predicate_name | subject_type | subject_cardinality | object_type | object_cardinality 
+----------------+--------------+---------------------+-------------+--------------------
+ worked_for     | liquid/node  | 1                   | liquid/node | 0
+(1 row)
+
+select x,
+       z
+from liquid.query($$
+Edge("ra", "link", "rb").
+Edge("rb", "link", "rc").
+Edge("rc", "link", "rd").
+
+Reach(x, y) :-
+  Edge(x, "link", y).
+
+Reach(x, z) :-
+  Reach(x, y),
+  Reach(y, z).
+
+Reach(x, z)?
+$$) as t(x text, z text)
+order by 1, 2;
+ x  | z  
+----+----
+ ra | rb
+ ra | rc
+ ra | rd
+ rb | rc
+ rb | rd
+ rc | rd
+(6 rows)
+
+do $$
+begin
+  begin
+    perform *
+    from liquid.query($liquid$ Edge(?x, "knows", y)? $liquid$) as t(x text, y text);
+    raise exception 'expected legacy syntax failure';
+  exception
+    when syntax_error then
+      raise notice 'legacy syntax rejected';
+  end;
+end $$;
+NOTICE:  legacy syntax rejected
