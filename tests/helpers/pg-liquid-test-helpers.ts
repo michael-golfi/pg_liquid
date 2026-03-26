@@ -34,6 +34,10 @@ export async function createIsolatedPgLiquidDb(prefix = 'pg_liquid_vitest'): Pro
 }
 
 export async function destroyIsolatedPgLiquidDb(db: PgLiquidTestDb): Promise<void> {
+  if (!db) {
+    return;
+  }
+
   await db.sql.end({ timeout: 5 });
   await execFile('dropdb', ['--if-exists', db.dbName]);
 }

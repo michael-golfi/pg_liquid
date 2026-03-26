@@ -15,6 +15,12 @@ METRICS=(
   "recursive_closure_stress_ms"
   "shortest_path_stress_ms"
   "compound_lookup_ms"
+  "read_as_lookup_ms"
+  "row_normalizer_backfill_ms"
+  "row_normalizer_trigger_insert_ms"
+  "row_normalizer_trigger_update_ms"
+  "row_normalizer_trigger_delete_ms"
+  "ontology_validation_ms"
 )
 
 STRESS_METRICS=(
@@ -141,6 +147,12 @@ collect_runs() {
   RECURSIVE_CLOSURE_STRESS_MAX_MS=999999999 \
   SHORTEST_PATH_STRESS_MAX_MS=999999999 \
   COMPOUND_LOOKUP_MAX_MS=999999999 \
+  READ_AS_LOOKUP_MAX_MS=999999999 \
+  ROW_NORMALIZER_BACKFILL_MAX_MS=999999999 \
+  ROW_NORMALIZER_TRIGGER_INSERT_MAX_MS=999999999 \
+  ROW_NORMALIZER_TRIGGER_UPDATE_MAX_MS=999999999 \
+  ROW_NORMALIZER_TRIGGER_DELETE_MAX_MS=999999999 \
+  ONTOLOGY_VALIDATION_MAX_MS=999999999 \
   OUTPUT_FILE="$TMP_DIR/${prefix}_warmup.tsv" \
   bash "$WORKDIR/scripts/bench_check.sh" >/dev/null
 
@@ -153,6 +165,12 @@ collect_runs() {
     RECURSIVE_CLOSURE_STRESS_MAX_MS=999999999 \
     SHORTEST_PATH_STRESS_MAX_MS=999999999 \
     COMPOUND_LOOKUP_MAX_MS=999999999 \
+    READ_AS_LOOKUP_MAX_MS=999999999 \
+    ROW_NORMALIZER_BACKFILL_MAX_MS=999999999 \
+    ROW_NORMALIZER_TRIGGER_INSERT_MAX_MS=999999999 \
+    ROW_NORMALIZER_TRIGGER_UPDATE_MAX_MS=999999999 \
+    ROW_NORMALIZER_TRIGGER_DELETE_MAX_MS=999999999 \
+    ONTOLOGY_VALIDATION_MAX_MS=999999999 \
     OUTPUT_FILE="$run_file" \
     bash "$WORKDIR/scripts/bench_check.sh" >/dev/null
 

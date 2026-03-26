@@ -18,13 +18,14 @@ $(DISTDIR):
 
 clean-legacy-artifacts:
 	rm -f $(LEGACY_ARTIFACTS)
+	rm -rf $(DISTDIR)
 
 all install clean check bench bench-check bench-guard: clean-legacy-artifacts | $(DISTDIR)
-	$(MAKE) -C $(DISTDIR) -f ../Makefile BUILD_SENTINEL=1 srcdir=.. $@
+	$(MAKE) -C $(DISTDIR) -f ../Makefile BUILD_SENTINEL=1 srcdir=.. PG_CONFIG="$(PG_CONFIG)" $@
 
 installcheck: clean-legacy-artifacts | $(DISTDIR)
-	$(MAKE) -C $(DISTDIR) -f ../Makefile BUILD_SENTINEL=1 srcdir=.. install
-	$(MAKE) -C $(DISTDIR) -f ../Makefile BUILD_SENTINEL=1 srcdir=.. installcheck
+	$(MAKE) -C $(DISTDIR) -f ../Makefile BUILD_SENTINEL=1 srcdir=.. PG_CONFIG="$(PG_CONFIG)" install
+	$(MAKE) -C $(DISTDIR) -f ../Makefile BUILD_SENTINEL=1 srcdir=.. PG_CONFIG="$(PG_CONFIG)" installcheck
 
 else
 MODULE_big = pg_liquid
@@ -51,7 +52,7 @@ bench-check: install
 bench-guard: install
 	bash $(srcdir)/scripts/bench_guard.sh $(BENCH_GUARD_MODE) --runs $(BENCH_GUARD_RUNS) --baseline $(BENCH_GUARD_BASELINE)
 
-PG_CONFIG = pg_config
+PG_CONFIG ?= pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 

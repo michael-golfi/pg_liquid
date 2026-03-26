@@ -1,13 +1,13 @@
 {
   "name": "pg_liquid",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
   "scripts": {
     "docs:build": "vitepress build docs",
     "docs:dev": "vitepress dev docs",
     "docs:preview": "vitepress preview docs",
-    "test": "vitest run",
+    "test": "PG_MAJOR=$(psql postgres -Atqc \"show server_version_num\" | cut -c1-2); PG_CONFIG_PATH=\"/opt/homebrew/opt/postgresql@$PG_MAJOR/bin/pg_config\"; if [ ! -x \"$PG_CONFIG_PATH\" ]; then PG_CONFIG_PATH=$(command -v pg_config); fi; make install PG_CONFIG=\"$PG_CONFIG_PATH\" && vitest run",
     "test:bench-shape": "vitest run tests/bench/benchmark-representativeness.test.ts"
   },
   "dependencies": {

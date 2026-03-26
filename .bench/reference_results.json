@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-03-26T17:03:33.878Z",
+  "bench_db": "postgres",
+  "workload": {
+    "bench_n": 3000,
+    "chain_n": 80,
+    "chain_n_stress": 120,
+    "sp_width": 8,
+    "ontology_class_n": 180,
+    "normalizer_rows": 400
+  },
+  "settings": {
+    "jit": "on",
+    "server_version": "16.8 (Homebrew)",
+    "server_version_num": "160008",
+    "work_mem": "4MB"
+  },
+  "metrics": {
+    "base_scan_ms": 21.77,
+    "bulk_load_ms": 468.331,
+    "compound_lookup_ms": 2.626,
+    "ontology_validation_ms": 234.788,
+    "point_lookup_ms": 5.059,
+    "read_as_lookup_ms": 43.878,
+    "recursive_closure_ms": 34.352,
+    "recursive_closure_stress_ms": 36.398,
+    "row_normalizer_backfill_ms": 84.409,
+    "row_normalizer_trigger_delete_ms": 24.973,
+    "row_normalizer_trigger_insert_ms": 30.811,
+    "row_normalizer_trigger_update_ms": 58.316,
+    "shortest_path_stress_ms": 70.724
+  }
+}

@@ -1,0 +1,15 @@
+# pg_liquid benchmark baseline snapshot
+# runs=3
+bulk_load_ms|346.206|350.518
+point_lookup_ms|2.501|3.315
+base_scan_ms|20.489|20.555
+recursive_closure_ms|33.849|36.231
+recursive_closure_stress_ms|36.460|36.776
+shortest_path_stress_ms|71.834|72.645
+compound_lookup_ms|1.975|2.087
+read_as_lookup_ms|45.294|45.493
+row_normalizer_backfill_ms|81.650|82.550
+row_normalizer_trigger_insert_ms|30.944|32.177
+row_normalizer_trigger_update_ms|53.762|54.771
+row_normalizer_trigger_delete_ms|24.129|24.710
+ontology_validation_ms|212.836|214.074

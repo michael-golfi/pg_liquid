@@ -11,12 +11,13 @@ create extension pg_liquid;
 or:
 
 ```sql
-alter extension pg_liquid update to '0.1.1';
+alter extension pg_liquid update to '0.1.6';
 ```
 
 ## Supported Upgrade Path
 
-The extension ships upgrade scripts from legacy internal `1.x` versions to the public `0.1.x` line.
+The extension ships upgrade scripts from legacy internal `1.x` versions through
+the public `0.1.x` line up to `0.1.6`.
 
 ## Recommended Rollout Sequence
 
@@ -25,25 +26,18 @@ The extension ships upgrade scripts from legacy internal `1.x` versions to the p
 3. Run smoke queries through `liquid.query(...)` or `liquid.read_as(...)`.
 4. Validate principal-scoped access if you use CLS.
 5. If using row normalizers, rebuild or backfill them deliberately.
+6. Capture benchmark output and compare it against `.bench/guard_baseline.tsv`.
 
 ## Useful Validation Commands
 
 ```sh
+npm test
 make package-check
 make installcheck
 make bench-check
+make bench-guard BENCH_GUARD_MODE=check
 make pgxn-package
 ```
-
-## GitHub and PGXN
-
-The repository now supports:
-
-- GitHub Actions CI
-- benchmark validation
-- automatic version bumping on release
-- GitHub release publishing
-- PGXN package publishing
 
 ## PostgreSQL Version Matrix
 

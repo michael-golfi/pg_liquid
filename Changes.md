@@ -1,5 +1,12 @@
 # Changes
 
+## 0.1.6
+
+- harden default function privileges for internal helpers and normalizer APIs
+- add public ontology validation helpers and public compound role introspection
+- expand benchmark coverage, artifact capture, and public benchmark guidance
+- refresh public docs/examples around the shipped `0.1.6` surface
+
 ## 0.1.5
 
 - automated patch release on 2026-03-26

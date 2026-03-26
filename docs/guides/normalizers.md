@@ -20,7 +20,20 @@ create table account_profiles (
 );
 ```
 
-## Step 2. Create the Normalizer
+## Step 2. Define The Compound Type
+
+```sql
+select *
+from liquid.query($$
+  DefCompound("AccountProfile", "account_id", "0", "liquid/string").
+  DefCompound("AccountProfile", "display_name", "0", "liquid/string").
+  DefCompound("AccountProfile", "tier", "0", "liquid/string").
+  Edge("AccountProfile", "liquid/mutable", "false").
+  AccountProfile@(account_id=account_id, display_name=display_name, tier=tier)?
+$$) as t(account_id text, display_name text, tier text);
+```
+
+## Step 3. Create The Normalizer
 
 ```sql
 select liquid.create_row_normalizer(
@@ -28,7 +41,7 @@ select liquid.create_row_normalizer(
   'account_profile_normalizer',
   'AccountProfile',
   '{
-    "account_id": "id",
+    "account_id": "account_id",
     "display_name": "display_name",
     "tier": "tier"
   }'::jsonb,
@@ -36,27 +49,23 @@ select liquid.create_row_normalizer(
 );
 ```
 
-## Step 3. Query the Generated Compound View
+## Step 4. Query The Generated Compound View
 
 ```sql
-select id, display_name, tier
+select account_id, display_name, tier
 from liquid.query($$
-  AccountProfile@(id=id, display_name=display_name, tier=tier)?
-$$) as t(id text, display_name text, tier text);
+  AccountProfile@(account_id=account_id, display_name=display_name, tier=tier)?
+$$) as t(account_id text, display_name text, tier text);
 ```
 
-## Step 4. Rebuild When Needed
+## Step 5. Rebuild Or Remove It
 
 ```sql
 select liquid.rebuild_row_normalizer(
   'account_profiles'::regclass,
   'account_profile_normalizer'
 );
-```
 
-## Step 5. Remove It Cleanly
-
-```sql
 select liquid.drop_row_normalizer(
   'account_profiles'::regclass,
   'account_profile_normalizer',
@@ -66,5 +75,6 @@ select liquid.drop_row_normalizer(
 
 ## Notes
 
-- normalizers are operational APIs, not a replacement for extension installs
-- use them for canonical relational data that should also be queryable as Liquid compounds
+- normalizers are operator-facing APIs, not a replacement for extension installs
+- use them for canonical relational data that should also be queryable as
+  Liquid compounds
