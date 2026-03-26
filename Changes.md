@@ -1,5 +1,9 @@
 # Changes
 
+## 0.1.1
+
+- automated patch release on 2026-03-26
+
 ## 0.1.0
 
 - prepare the initial public PGXN release
