@@ -10,7 +10,7 @@ drop schema if exists liquid cascade;
 create extension pg_liquid;
 \timing on
 
-\echo '--- warmup: recursive LIquid path ---'
+\echo '--- warmup: recursive Liquid path ---'
 SELECT count(*)
 FROM liquid.query($$
 Edge("warm/node/1", "warm/link", "warm/node/2").
@@ -19,7 +19,7 @@ WarmReach(x, z) :- WarmReach(x, y), WarmReach(y, z).
 WarmReach(x, z)?
 $$) AS t(x text, y text);
 
-\echo '--- 1. Bulk LIquid assertion load (user/session/device graph) ---'
+\echo '--- 1. Bulk Liquid assertion load (user/session/device graph) ---'
 WITH RECURSIVE nums(n) AS (
   SELECT 1
   UNION ALL

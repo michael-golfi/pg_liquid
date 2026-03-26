@@ -4,7 +4,7 @@ This is the fastest way to learn the core `pg_liquid` model.
 
 ## 1. Assert Basic Facts
 
-Graph facts are ordinary LIquid assertions:
+Graph facts are ordinary Liquid assertions:
 
 ```sql
 select *

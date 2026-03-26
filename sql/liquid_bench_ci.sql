@@ -46,7 +46,7 @@ begin
   sp_layers := greatest(3, ceil(current_setting('pg_liquid.chain_n_stress')::numeric / sp_width)::int);
   sp_target := format('SpNode:%s:%s', sp_layers, sp_width);
 
-  -- Warm planner/JIT paths used by recursive LIquid evaluation before timing.
+  -- Warm planner/JIT paths used by recursive Liquid evaluation before timing.
   perform count(*)
   from liquid.query($liquid$
 Edge("warm/node/1", "warm/link", "warm/node/2").

@@ -1,8 +1,8 @@
 /*
  * pg_liquid.h — shared header for the pg_liquid extension.
  *
- * LIquid blog parity reset:
- *   - LIquid program parsing with local rule predicates
+ * Liquid blog parity reset:
+ *   - Liquid program parsing with local rule predicates
  *   - Named compound atoms with cid bindings
  *   - Single tabular query path
  *   - Existing solver retained for adaptive rule evaluation
@@ -291,7 +291,7 @@ typedef struct LiquidScanState
 } LiquidScanState;
 
 /* ----------------------------------------------------------------
- * Parsed LIquid program
+ * Parsed Liquid program
  * ---------------------------------------------------------------- */
 
 typedef struct LiquidEdgeLiteralTriple

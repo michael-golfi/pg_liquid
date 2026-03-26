@@ -2,7 +2,7 @@
 
 ## Public Model
 
-`pg_liquid` now exposes the LIquid blog data model directly:
+`pg_liquid` now exposes the Liquid blog data model directly:
 
 - all persistent data is stored as graph edges `(subject, predicate, object)`
 - schema is also graph data
@@ -17,7 +17,7 @@ liquid.query_as(principal text, program text)
 liquid.read_as(principal text, program text)
 ```
 
-`program` is a LIquid program containing zero or more assertions and rules,
+`program` is a Liquid program containing zero or more assertions and rules,
 followed by one terminal `?` query.
 
 `liquid.query(...)` is the base extension entrypoint.
@@ -52,7 +52,7 @@ Legacy extension syntax is intentionally rejected:
 
 ## Bootstrap Schema
 
-Schema is encoded using LIquid bootstrap predicates:
+Schema is encoded using Liquid bootstrap predicates:
 
 - `liquid/type`
 - `liquid/cardinality`
@@ -62,7 +62,7 @@ Schema is encoded using LIquid bootstrap predicates:
 - `liquid/mutable`
 
 `DefPred(...)`, `DefCompound(...)`, and `TypeAndCardinality(...)` are query
-predicates synthesized from that graph data so the LIquid blog examples can be
+predicates synthesized from that graph data so the Liquid blog examples can be
 executed directly.
 
 `pg_liquid` also ships a first-class policy vocabulary in graph data:
@@ -87,4 +87,4 @@ Compounds are stored as ordinary vertices plus role edges:
   still computed and used internally
 
 `DefCompound("Type", "role", "cardinality", "type")` declares compound roles
-and also exposes the implicit `Type@(...)` query form from the LIquid blog.
+and also exposes the implicit `Type@(...)` query form from the Liquid blog.

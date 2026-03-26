@@ -2,7 +2,7 @@
 
 ## Goal
 
-`pg_liquid` maps the LIquid blog language and data model into PostgreSQL
+`pg_liquid` maps the Liquid blog language and data model into PostgreSQL
 without inventing a separate public API surface.
 
 ## Shipped Interface
@@ -18,7 +18,7 @@ liquid.drop_row_normalizer(source_table regclass, normalizer_name text, purge bo
 liquid.rebuild_row_normalizer(source_table regclass, normalizer_name text)
 ```
 
-`program` is a LIquid Datalog program containing:
+`program` is a Liquid Datalog program containing:
 
 - `%` comments
 - `.`-terminated assertions and rule definitions
@@ -48,7 +48,7 @@ Not implemented:
 
 ## PostgreSQL-Specific Tradeoffs
 
-This implementation uses PostgreSQL tables and indexes rather than LIquid's
+This implementation uses PostgreSQL tables and indexes rather than Liquid's
 custom in-memory storage engine. That means:
 
 - MVCC still applies

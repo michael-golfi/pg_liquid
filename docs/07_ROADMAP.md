@@ -5,7 +5,7 @@
 - public execution surface: `liquid.query(text)`, `liquid.query_as(text, text)`,
   and `liquid.read_as(text, text)`
 - extension-native table-to-compound normalization through row triggers
-- LIquid blog syntax parsing
+- Liquid blog syntax parsing
 - graph-backed bootstrap schema
 - relative-identity compounds
 - query-local rule evaluation

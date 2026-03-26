@@ -2983,7 +2983,7 @@ evaluate_rules(LiquidScanState *lss)
                 if (iters++ >= MAX_RULE_ITERATIONS)
                     ereport(ERROR,
                             (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-                             errmsg("recursive LIquid evaluation exceeded %d iterations",
+                             errmsg("recursive Liquid evaluation exceeded %d iterations",
                                     MAX_RULE_ITERATIONS)));
 
                 delta_context = AllocSetContextCreate(lss->solver_context,

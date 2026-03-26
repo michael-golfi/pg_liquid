@@ -52,7 +52,7 @@ You should see:
 The extension installs:
 
 - graph storage tables under `liquid`
-- LIquid query entrypoints
+- Liquid query entrypoints
 - row normalizer management functions
 - bootstrap graph vocabulary needed for predicates, compounds, and policy rules
 

@@ -12,7 +12,7 @@ All persistent facts are stored as graph edges:
 
 ## Schema as Data
 
-Predicate and compound declarations are represented in graph data and exposed through LIquid-compatible query predicates.
+Predicate and compound declarations are represented in graph data and exposed through Liquid-compatible query predicates.
 
 ## Compounds
 

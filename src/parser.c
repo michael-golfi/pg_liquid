@@ -420,7 +420,7 @@ parse_normal_atom(char *token,
     if (open_paren == NULL)
         ereport(ERROR,
                 (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("invalid LIquid atom: %s", trimmed)));
+                 errmsg("invalid Liquid atom: %s", trimmed)));
 
     *open_paren = '\0';
     name = pstrdup(trim_whitespace(trimmed));
@@ -933,7 +933,7 @@ parse_liquid_program(char *input)
                     if (saw_query)
                         ereport(ERROR,
                                 (errcode(ERRCODE_SYNTAX_ERROR),
-                                 errmsg("LIquid programs may contain only one terminal query")));
+                                 errmsg("Liquid programs may contain only one terminal query")));
                     if (!builtins_appended && statement_has_predicate_atoms(statement))
                     {
                         append_builtin_rules(program, &local_predicates);

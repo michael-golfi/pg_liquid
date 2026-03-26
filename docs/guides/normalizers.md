@@ -1,13 +1,13 @@
 # Add Row Normalizers
 
-Row normalizers project relational rows into LIquid compounds.
+Row normalizers project relational rows into Liquid compounds.
 
 ## When to Use Them
 
 Use a row normalizer when:
 
 - your source of truth is a PostgreSQL table
-- you want LIquid-style compound queries over those rows
+- you want Liquid-style compound queries over those rows
 - you want updates to stay synchronized automatically
 
 ## Step 1. Create a Source Table
@@ -67,4 +67,4 @@ select liquid.drop_row_normalizer(
 ## Notes
 
 - normalizers are operational APIs, not a replacement for extension installs
-- use them for canonical relational data that should also be queryable as LIquid compounds
+- use them for canonical relational data that should also be queryable as Liquid compounds

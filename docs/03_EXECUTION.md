@@ -2,7 +2,7 @@
 
 ## Evaluation Model
 
-`pg_liquid` parses a LIquid program, executes any allowed top-level assertions,
+`pg_liquid` parses a Liquid program, executes any allowed top-level assertions,
 reparses the program against the updated graph state, and then evaluates the
 terminal query.
 
@@ -72,5 +72,5 @@ when that is required for correctness and within the configured cache budget.
 
 `liquid.query(...)`, `liquid.query_as(...)`, and `liquid.read_as(...)` return
 tabular bindings only. Output columns correspond to the first appearance order
-of named variables in the terminal query, and values are returned as LIquid
+of named variables in the terminal query, and values are returned as Liquid
 string literals rather than internal vertex ids.

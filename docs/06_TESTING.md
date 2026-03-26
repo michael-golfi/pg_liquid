@@ -15,13 +15,13 @@ The active regression suite is:
 
 These cover:
 
-- LIquid blog examples
+- Liquid blog examples
 - bootstrap schema behavior
 - compounds and `cid` binding
 - legacy syntax rejection
 - comment handling and `_`
 - escaped string parsing
-- larger generated LIquid programs
+- larger generated Liquid programs
 - low-budget edge-cache fallback correctness
 - tombstone invisibility and reactivation
 - install/upgrade surface validation
@@ -56,7 +56,7 @@ yarn vitest run -c libs/pg_liquid/vitest.config.ts
 
 The benchmark focuses on:
 
-- bulk LIquid assertion load
+- bulk Liquid assertion load
 - point lookup through `liquid.query(...)`
 - equality-heavy base storage scans
 - recursive closure

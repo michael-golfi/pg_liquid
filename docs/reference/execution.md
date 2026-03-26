@@ -1,6 +1,6 @@
 # Execution Model
 
-`pg_liquid` parses one LIquid program, executes any top-level assertions, and evaluates the terminal query against the current graph state.
+`pg_liquid` parses one Liquid program, executes any top-level assertions, and evaluates the terminal query against the current graph state.
 
 ## Important Runtime Properties
 

@@ -1,6 +1,6 @@
 # Model Compounds
 
-Compounds let you represent structured records in LIquid syntax while still storing everything in graph form.
+Compounds let you represent structured records in Liquid syntax while still storing everything in graph form.
 
 ## Step 1. Define a Compound Type
 
@@ -18,7 +18,7 @@ $$) as t(cid text, user_name text, domain text);
 
 ## Step 2. Understand `cid`
 
-The compound identity is a canonical LIquid literal built from the type and roles.
+The compound identity is a canonical Liquid literal built from the type and roles.
 
 - `cid=` is optional when asserting
 - `cid=` is useful when querying or joining compounds with edges

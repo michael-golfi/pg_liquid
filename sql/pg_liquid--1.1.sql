@@ -1,4 +1,4 @@
--- pg_liquid 1.1 — LIquid blog parity reset
+-- pg_liquid 1.1 — Liquid blog parity reset
 
 create table if not exists liquid.vertices (
   id bigserial primary key,

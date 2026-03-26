@@ -1,6 +1,6 @@
-# LIquid Language Surface
+# Liquid Language Surface
 
-`pg_liquid` supports the public LIquid syntax used in the LIquid blog examples.
+`pg_liquid` supports the public Liquid syntax used in the Liquid blog examples.
 
 ## Supported Surface
 
@@ -15,7 +15,7 @@
 
 ## Query Shape
 
-A LIquid program is:
+A Liquid program is:
 
 - zero or more assertions
 - zero or more query-local rules

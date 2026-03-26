@@ -57,7 +57,7 @@ Recommended rollout sequence:
 
 ## Privilege Model
 
-CLS is enforced by the LIquid execution functions, not by direct reads from the
+CLS is enforced by the Liquid execution functions, not by direct reads from the
 storage tables. Production deployment should grant the narrowest useful
 function surface while restricting direct reads from the graph tables.
 
@@ -120,7 +120,7 @@ request principal for the duration of the call, evaluates CLS as that principal
 or any inherited `liquid/acts_for` ancestor, and rejects top-level assertions.
 
 `liquid.query_as(...)` remains available for trusted write-capable wrappers that
-need to seed or mutate LIquid state before querying.
+need to seed or mutate Liquid state before querying.
 
 `pg_liquid.policy_principal` remains available for privileged maintenance or
 manual operator sessions:
@@ -133,13 +133,13 @@ reset pg_liquid.policy_principal;
 ## Table Normalizers
 
 Row normalizers are the supported way to project an authoritative relational
-table into LIquid compounds.
+table into Liquid compounds.
 
 Preconditions:
 
 - the source relation must be a base table
 - the source table must have a primary key
-- the compound type must already be defined in the LIquid graph schema
+- the compound type must already be defined in the Liquid graph schema
 - the `role_columns` JSON object must map every compound role exactly once
 - if any mapped source column is `NULL`, that row projects no compound
 

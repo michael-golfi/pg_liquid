@@ -2,14 +2,14 @@
 
 ## Current Model
 
-`pg_liquid` implements a graph-level read filter for LIquid facts and
+`pg_liquid` implements a graph-level read filter for Liquid facts and
 compounds.
 
 The executor reads the session principal from:
 
 - `pg_liquid.policy_principal`
 
-If that setting is empty or unset, the executor does not apply LIquid-specific
+If that setting is empty or unset, the executor does not apply Liquid-specific
 filtering and all non-deleted graph facts are readable.
 
 If that setting is present, the executor only exposes data granted to that
@@ -20,7 +20,7 @@ principal through graph edges and derived CLS policies.
 The preferred authoring model is:
 
 - bind the trusted request principal through `liquid.query_as(principal, program)` or `liquid.read_as(principal, program)`
-- author explicit grants and derived policies as LIquid compounds
+- author explicit grants and derived policies as Liquid compounds
 - keep `pg_liquid.policy_principal` as the internal execution carrier, not the
   application-facing API
 
@@ -144,7 +144,7 @@ a trusted application boundary. Do not assume direct SQL access plus
 
 `liquid.read_as(...)` is the supported least-privilege read surface for direct
 SQL roles that should not read internal `liquid` tables or execute assertion-
-capable LIquid programs. It runs as a security-definer wrapper and rejects
+capable Liquid programs. It runs as a security-definer wrapper and rejects
 top-level assertions.
 
 Operational rollout guidance, including recommended `GRANT`/`REVOKE` patterns,

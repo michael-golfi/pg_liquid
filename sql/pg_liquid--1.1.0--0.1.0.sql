@@ -1,5 +1,5 @@
 -- pg_liquid 1.1.0 -> 0.1.0
--- Reset the extension to the LIquid blog parity surface.
+-- Reset the extension to the Liquid blog parity surface.
 
 drop function if exists liquid.query_subgraph(text);
 drop function if exists liquid.query(text, bigint);

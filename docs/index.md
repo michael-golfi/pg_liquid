@@ -1,11 +1,11 @@
 # pg_liquid
 
-`pg_liquid` brings LIquid-style graph, compound, and ontology querying into PostgreSQL as a native extension.
+`pg_liquid` brings Liquid-style graph, compound, and ontology querying into PostgreSQL as a native extension.
 
 It is built for teams that want to:
 
 - store graph facts as ordinary PostgreSQL data
-- express ontology and workflow relationships with LIquid syntax
+- express ontology and workflow relationships with Liquid syntax
 - query recursive graphs without standing up a separate graph database
 - enforce principal-scoped reads with extension-level policy rules
 
@@ -15,7 +15,7 @@ It is built for teams that want to:
 - Define structured compound types such as `Email@(...)` or `OntologyClaim@(...)`
 - Write recursive query-local rules
 - Build ontology vocabularies directly in graph data
-- Project relational tables into LIquid compounds with row normalizers
+- Project relational tables into Liquid compounds with row normalizers
 - Expose least-privilege reads through `liquid.read_as(...)`
 
 ## Start Here
@@ -46,5 +46,5 @@ liquid.rebuild_row_normalizer(source_table regclass, normalizer_name text)
 - [I want to query paths and recursive reachability](./guides/query-graphs.md)
 - [I want typed records and role-based modeling](./guides/compounds.md)
 - [I want a real ontology vocabulary](./guides/ontologies.md)
-- [I want PostgreSQL tables to feed LIquid compounds](./guides/normalizers.md)
+- [I want PostgreSQL tables to feed Liquid compounds](./guides/normalizers.md)
 - [I want principal-aware reads](./guides/security.md)

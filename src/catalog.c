@@ -121,7 +121,7 @@ ensure_catalog_caches(void)
 
     if (catalog_cache_mcxt == NULL)
         catalog_cache_mcxt = AllocSetContextCreate(TopMemoryContext,
-                                                   "LIquid Catalog Cache",
+                                                   "Liquid Catalog Cache",
                                                    ALLOCSET_SMALL_SIZES);
 
     memset(catalog_literal_id_cache, 0, sizeof(catalog_literal_id_cache));
@@ -134,7 +134,7 @@ ensure_catalog_caches(void)
         ctl.keysize = sizeof(int64);
         ctl.entrysize = sizeof(CompoundSchemaCacheEntry);
         ctl.hcxt = catalog_cache_mcxt;
-        catalog_compound_schema_cache = hash_create("LIquid Compound Schema Cache",
+        catalog_compound_schema_cache = hash_create("Liquid Compound Schema Cache",
                                                     64,
                                                     &ctl,
                                                     HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);

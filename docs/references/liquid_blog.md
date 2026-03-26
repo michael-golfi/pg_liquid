@@ -1,14 +1,14 @@
-**Editor's note:** In this two-part blog series, we introduce **LIquid**, a new graph database built by LinkedIn to support human real-time querying of the _economic graph_. It is a complete implementation of the relational model that supports fast, constant-time traversal of graph edges with a relational graph data model that is simple and self-describing, yet still manages to support the definition and indexing of complex n-ary relationships and property graphs. LIquid's interface is a declarative query language based on Datalog. LIquid's query processing engine achieves high performance by using dynamic query planning on wait-free shared-memory index structures.
+**Editor's note:** In this two-part blog series, we introduce **Liquid**, a new graph database built by LinkedIn to support human real-time querying of the _economic graph_. It is a complete implementation of the relational model that supports fast, constant-time traversal of graph edges with a relational graph data model that is simple and self-describing, yet still manages to support the definition and indexing of complex n-ary relationships and property graphs. Liquid's interface is a declarative query language based on Datalog. Liquid's query processing engine achieves high performance by using dynamic query planning on wait-free shared-memory index structures.
 
 ### Part 1: Graph Data and Applications
 
 Part 1 below will describe how graph data relates to applications, specifically the in-memory graph of structures commonly used as "models" in the sense of "Model-View-Controller" as understood by graphical applications. Since the reason for having a database is ultimately applications, this seems like a good place to start. In part 2, we will describe how graph data can be stored in a conventional relational database, and why conventional relational databases don't work very well for this purpose. Rather than scrapping the relational model completely, we will go on to show how relational graph data can be processed efficiently.
 
-### Introducing LIquid, LinkedIn's in-house graph database
+### Introducing Liquid, LinkedIn's in-house graph database
 
-Our team at LinkedIn has spent the last four years building a new graph database named **LIquid**. LIquid is a single, automated service that replaces the hand-coded queries that sometimes added several hundred milliseconds to page load times for members. It can be queried with a powerful general-purpose query language and return the necessary results in an optimal fashion.
+Our team at LinkedIn has spent the last four years building a new graph database named **Liquid**. Liquid is a single, automated service that replaces the hand-coded queries that sometimes added several hundred milliseconds to page load times for members. It can be queried with a powerful general-purpose query language and return the necessary results in an optimal fashion.
 
-### Why LIquid?
+### Why Liquid?
 
 Why does LinkedIn need a graph database? We'll get to a more formal answer later in this post, but here's the intuition: the value of an _economic graph_ for the average member lies mostly in their second degree network. These are the connections of your connections, such as the colleague of an old school friend, or the new boss of a co-worker from a prior job.
 
@@ -18,9 +18,9 @@ A first degree network of, for example, 250 connections, would be easily handled
 
 On the other hand, computing second degree connections on demand is no picnic either. The first degree is easy to materialize, but thereafter, the join to produce the second is daunting, particularly if you have to search a table of billions of edges stored in conventional sorted storage (typically some sort of terabyte-scale _B-tree_). For an average first degree, this join will be extremely sparse, effectively 250 random look-ups.
 
-For these reasons, LinkedIn has built a series of increasingly general-purpose _graph serving systems_ to provide real-time access to the core of the economic graph. Initially, the graph only stored connections in a very simple format, a tuple of (source, dest, score). Subsequent versions were extended to include other types of edges such as employment and education. However, edges were limited to 2 integer endpoints and 64 bits of attribute data, (type, source, dest, attributes). LIquid is the most recent of these systems, and the first one which is general purpose: a database that implements the relational model, fully described by a schema and accessed by a declarative query language with functionality comparable to SQL.
+For these reasons, LinkedIn has built a series of increasingly general-purpose _graph serving systems_ to provide real-time access to the core of the economic graph. Initially, the graph only stored connections in a very simple format, a tuple of (source, dest, score). Subsequent versions were extended to include other types of edges such as employment and education. However, edges were limited to 2 integer endpoints and 64 bits of attribute data, (type, source, dest, attributes). Liquid is the most recent of these systems, and the first one which is general purpose: a database that implements the relational model, fully described by a schema and accessed by a declarative query language with functionality comparable to SQL.
 
-In LIquid, edges are triples of strings, (subject, predicate, object), and compounds can be built out of edges to represent n-ary relationships with arbitrary attributes.
+In Liquid, edges are triples of strings, (subject, predicate, object), and compounds can be built out of edges to represent n-ary relationships with arbitrary attributes.
 
 ### From Objects to Graphs
 
@@ -66,13 +66,13 @@ To generate a consistent result, we choose a log offset, probably the current en
 
 In theory, the single writer is a bottleneck, but in practice, we have no trouble appending edges to the log at a rate which exceeds the write rate of a large social graph by many orders of magnitude. An ever-growing log would be a liability for edges which frequently change, but most human-curated data does not have this property. Additions occur at human speed, and deletions, which we handle by appending a tombstone edge, are relatively infrequent.
 
-While heavily optimized for both space and speed, these index structures are the basic index data structures that LIquid uses. They deliver fast, constant-time performance that allows graph edges to be used blithely, much as one would use pointers.
+While heavily optimized for both space and speed, these index structures are the basic index data structures that Liquid uses. They deliver fast, constant-time performance that allows graph edges to be used blithely, much as one would use pointers.
 
-While we still have much to describe, the outline of LIquid is clear: we build a log-structured, in-memory inverted index of edges, triples of strings. Internally, the strings are converted to integers, pointers to structures in the object-oriented formulation. We process queries using this index and return the results to the application program as a set of edges, a subgraph. The application program converts the edges into whatever structural idiom is convenient, a graph of structures or a DOM tree, and displays the results to the user.
+While we still have much to describe, the outline of Liquid is clear: we build a log-structured, in-memory inverted index of edges, triples of strings. Internally, the strings are converted to integers, pointers to structures in the object-oriented formulation. We process queries using this index and return the results to the application program as a set of edges, a subgraph. The application program converts the edges into whatever structural idiom is convenient, a graph of structures or a DOM tree, and displays the results to the user.
 
 The ingredients for this conversion are simple: mappings from identity string to address or structure offset and possibly a topological sort of result edges so that the target hierarchy can be built bottom-up.
 
-In the next part, we'll describe how to express a graph in the relational model, why conventional relational databases don't work very well for this purpose, and how LIquid can process relational graph data efficiently.
+In the next part, we'll describe how to express a graph in the relational model, why conventional relational databases don't work very well for this purpose, and how Liquid can process relational graph data efficiently.
 
 ## Part 2: Relational Graph Data and Query Processing
 
@@ -84,7 +84,7 @@ In the next part, we'll describe how to express a graph in the relational model,
 
 ### Graphs as relational data
 
-In the last post, we started by discussing the design of LIquid in a straightforward way, beginning from the application programmer's view, a graph of objects in memory, and solving problems as we encountered them. However, having arrived at a point where we have relational edge data (the graph log) and an inverted index (the objects), we might want to look at a conventional relational approach to this problem. In fact, representing a graph as an adjacency list of edges in a tabular relational system is easy:
+In the last post, we started by discussing the design of Liquid in a straightforward way, beginning from the application programmer's view, a graph of objects in memory, and solving problems as we encountered them. However, having arrived at a point where we have relational edge data (the graph log) and an inverted index (the objects), we might want to look at a conventional relational approach to this problem. In fact, representing a graph as an adjacency list of edges in a tabular relational system is easy:
 
 ```sql
 CREATE TABLE vertices (
@@ -184,7 +184,7 @@ This produces the following result:
 
 As notation, this is cumbersome. Syntax alone is a solvable problem. However, notice the redundancy in the output: pairs like (Java, Oracle) or (a1, b1) occur multiple times, even though there is just one underlying edge. This spurious cross product in the result table is a fundamental problem. Both the data and the result desired by the user are graph-shaped. Representing a graph as a table of tuples of variable bindings forces cross products, two of them in this very simple example. In theory, this is just a protocol problem brought on by SQL's use of a single table for query results—one we could fix by returning matching rows from multiple tables instead of just one. However, in practice, tabular relational systems really use relational algebra to evaluate queries, and thus spurious cross products are actually an efficiency concern. As one of our co-authors, Andrew Carter, once quipped, "It is difficult to have MxN stuff without doing MxN work." Sadly, this isn't the end of the bad news for relational algebra. Graph-shaped queries—those with circular constraints among the variables—turn out to be important, with triangular or diamond-shaped constraints being a common task. Recent work on "Worst-case Optimal Join Algorithms" has shown that "any algorithm based on the traditional select-project-join style plans typically employed in an RDBMS are asymptotically slower than the optimal for some queries," with a simple triangular join being the leading example.
 
-LIquid uses a cost-based dynamic query evaluator, based on constraint satisfaction applied to a graph of edge-constraints. In this context, "dynamic" means that the query plan is not known when evaluation starts. In a traditional SQL query evaluator, the query plan (a tree of relational algebra operators) is completely determined before evaluation starts. In contrast, LIquid's evaluator establishes path consistency of the result subgraph by repeatedly satisfying the cheapest remaining constraint. For cost computations, the evaluator relies heavily on constant-time access to set sizes in the index. We'll describe the query evaluator in more detail in an upcoming paper; for now, let's just say that we think that the performance problems traditionally associated with a relational graph data model are tractable. This leaves us needing only a relational query language with a succinct, composable syntax. Like this, perhaps:
+Liquid uses a cost-based dynamic query evaluator, based on constraint satisfaction applied to a graph of edge-constraints. In this context, "dynamic" means that the query plan is not known when evaluation starts. In a traditional SQL query evaluator, the query plan (a tree of relational algebra operators) is completely determined before evaluation starts. In contrast, Liquid's evaluator establishes path consistency of the result subgraph by repeatedly satisfying the cheapest remaining constraint. For cost computations, the evaluator relies heavily on constant-time access to set sizes in the index. We'll describe the query evaluator in more detail in an upcoming paper; for now, let's just say that we think that the performance problems traditionally associated with a relational graph data model are tractable. This leaves us needing only a relational query language with a succinct, composable syntax. Like this, perhaps:
 
 ```txt
 FOAF(a, b, c) :-  % Friend of a Friend
@@ -306,7 +306,7 @@ DefPred(p, sc, st, oc, ot) :-
 
 This allows us to have distinct relative identities for a predicate: "the subject side," sm, and "the object side," om, without bothering the user to come up with unique identifiers for them.
 
-### LIquid's nearest neighbors
+### Liquid's nearest neighbors
 
 Let's define what we've built. A "graph database" is an implementation of the relational model with the following properties: All relations are equal and first-class. While a useful form of index for predictable access patterns, employing tables as the physical data model results in inequities as soon as there is more than one table. Tuples expressed in a single physical table are vastly more performant than those expressed by joining two or more tables. Lastly, the lack of domain support in tabular relational systems makes the user's intentions with respect to possible joins opaque. In a graph database, the existence of an edge is exactly expressive of user intent. Edge traversal is fast and constant-time. If everything is stored as edges, we're going to be doing a lot of joining, specifically self-joins. Every query with small intermediate results will almost certainly devolve into random access. Query results are a subgraph. Application models are complex and applications need to be able to retrieve arbitrarily complex models in a single query with a single consistency guarantee. Schema-evolution is constant-time. If schema-evolution (really, the addition of new predicates) takes non-constant time, then the database implementation must be pretending to continue to operate with edges while maintaining structs or tables under the covers.
 
@@ -318,7 +318,7 @@ There are many things in the world that call themselves graph databases, roughly
 
 Aside from #3, none of them have clear relationships to the relational model. None of them support n-ary compound edges. Query evaluation is either relational algebra-based, or imperative (traversal-based).
 
-RDF is quite close to LIquid's Edge in spirit, but has introduced a great deal of complexity. Triples are asymmetric. Actually, they are quads. There is a language tag that is difficult to square with both unicode string encoding, which is multilingual, and no type system (there are several) that can express cardinality constraints like: "one name in any language." SPARQL seems to have inherited most of SQL's ailments.
+RDF is quite close to Liquid's Edge in spirit, but has introduced a great deal of complexity. Triples are asymmetric. Actually, they are quads. There is a language tag that is difficult to square with both unicode string encoding, which is multilingual, and no type system (there are several) that can express cardinality constraints like: "one name in any language." SPARQL seems to have inherited most of SQL's ailments.
 
 Property graphs introduce a second schema for properties and force the user to choose between representing data as edges or as properties of nodes or edges. A node with properties is basically an object and suffers from all of the drawbacks of OODBs. The obvious encoding of a property graph as a table of vertices (with properties) and a table of edges (with properties) will force two lookups for any query involving properties of vertices and edges.
 

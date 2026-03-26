@@ -46,7 +46,7 @@ All indexes are partial on `is_deleted = false`.
 
 Writes are append/update in SQL terms but logically edge-oriented:
 
-- vertices are created on demand from LIquid string identities
+- vertices are created on demand from Liquid string identities
 - facts are inserted as graph edges
 - duplicate edge assertions reactivate tombstoned rows with
   `is_deleted = false`
@@ -60,7 +60,7 @@ Rules are not stored persistently. They exist only for the duration of one
 ## Row Normalizer Lifecycle
 
 Row normalizers are table-authoritative projections from one PostgreSQL base
-table into one LIquid compound type.
+table into one Liquid compound type.
 
 Each normalizer stores:
 
@@ -98,4 +98,4 @@ not internal vertex ids.
 
 The repository also ships a current benchmark script in
 `sql/liquid_bench.sql` and a `make bench BENCH_DB=<database>` target for
-repeatable smoke benchmarking against the current LIquid-blog surface.
+repeatable smoke benchmarking against the current Liquid-blog surface.

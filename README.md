@@ -1,6 +1,6 @@
 # pg_liquid
 
-`pg_liquid` is a PostgreSQL extension that maps the LIquid blog language and
+`pg_liquid` is a PostgreSQL extension that maps the Liquid blog language and
 data model onto native PostgreSQL storage and execution.
 
 Documentation site:
@@ -13,9 +13,9 @@ It ships:
 - `liquid.query_as(principal text, program text)`
 - `liquid.read_as(principal text, program text)`
 - row normalizer management functions for projecting relational rows into
-  LIquid compounds
+  Liquid compounds
 
-Supported LIquid program features include:
+Supported Liquid program features include:
 
 - `%` comments
 - `.`-terminated assertions and rule definitions
