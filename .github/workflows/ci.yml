@@ -6,9 +6,13 @@ on:
 
 jobs:
   installcheck:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg_major: ['14', '15', '16', '17', '18']
     runs-on: ubuntu-22.04
     env:
-      PG_MAJOR: '16'
+      PG_MAJOR: ${{ matrix.pg_major }}
     steps:
       - name: Check Out
         uses: actions/checkout@v4
@@ -46,7 +50,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: installcheck-logs
+          name: installcheck-logs-pg${{ matrix.pg_major }}
           path: |
             dist/regression.diffs
             dist/regression.out

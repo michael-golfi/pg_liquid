@@ -5,10 +5,11 @@
 Build and install the extension against the target PostgreSQL instance:
 
 ```sh
-cd libs/pg_liquid
 make
 sudo make install
 ```
+
+Validated PostgreSQL versions: `14`, `15`, `16`, `17`, and `18`.
 
 Then create the extension in the target database:
 
@@ -31,16 +32,16 @@ This installs:
 ## Upgrade
 
 `pg_liquid` ships upgrade paths from the legacy internal versions `1.0.0`,
-`1.1.0`, and `1.2.0` to the public release `0.1.0`:
+`1.1.0`, and `1.2.0` to the public releases `0.1.0` and `0.1.1`:
 
 ```sql
-alter extension pg_liquid update to '0.1.0';
+alter extension pg_liquid update to '0.1.1';
 ```
 
 The repository regression `sql/liquid_upgrade.sql` validates both:
 
 - empty install/upgrade behavior
-- data-bearing `1.0.0 -> 0.1.0` upgrades
+- data-bearing `1.0.0 -> 0.1.1` upgrades
 
 ## Rollout Checklist
 

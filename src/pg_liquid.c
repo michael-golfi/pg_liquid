@@ -8,6 +8,7 @@
 #include "utils/guc.h"
 #include "utils/hsearch.h"
 #include "access/htup_details.h"
+#include "access/xact.h"
 #include "common/hashfn.h"
 #include "pg_liquid.h"
 
