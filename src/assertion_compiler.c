@@ -1786,7 +1786,7 @@ compile_query_atoms(LiquidExecutionPlan *plan, LiquidProgram *program)
 
     foreach(lc, program->query_atoms)
         append_query_atom(plan,
-                          compile_atom(plan, (LiquidAtom *) lfirst(lc), false, true));
+                          compile_atom(plan, (LiquidAtom *) lfirst(lc), true, true));
 }
 
 static void
@@ -1805,14 +1805,14 @@ compile_rules(LiquidExecutionPlan *plan, LiquidProgram *program)
         int                 num_var_atom_count;
         MemoryContext       oldcxt;
 
-        compiled_rule->head = compile_atom(plan, source_rule->head, false, true);
+        compiled_rule->head = compile_atom(plan, source_rule->head, true, true);
         compiled_rule->body_count = body_count;
         compiled_rule->body_atoms = append_rule_body_slots(plan, body_count);
 
         foreach(body_lc, source_rule->body)
         {
             compiled_rule->body_atoms[body_index++] =
-                compile_atom(plan, (LiquidAtom *) lfirst(body_lc), false, true);
+                compile_atom(plan, (LiquidAtom *) lfirst(body_lc), true, true);
         }
 
         num_var_atom_count = body_count + 1;
@@ -1880,7 +1880,7 @@ finalize_execution_plan_ids(LiquidExecutionPlan *plan)
             continue;
 
         {
-            int64 resolved = lookup_identity(ref->literal);
+            int64 resolved = get_or_create_identity(ref->literal);
 
             if (resolved >= 0)
                 *ref->target_id = resolved;

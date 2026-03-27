@@ -580,6 +580,31 @@ materialize_results(LiquidExecutionPlan *plan,
     MemoryContextSwitchTo(oldcxt);
 }
 
+static void
+validate_query_output_arity(LiquidExecutionPlan *plan, TupleDesc tdesc)
+{
+    int projected = (plan != NULL) ? plan->query_num_output_vars : 0;
+    int declared = (tdesc != NULL) ? tdesc->natts : 0;
+
+    if (plan == NULL || plan->query_atom_count == 0)
+        return;
+
+    if (projected == 0)
+        ereport(ERROR,
+                (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                 errmsg("Liquid query projects zero variables and cannot be materialized as record"),
+                 errhint("Project at least one named variable in the terminal query; `_` is anonymous and is not projected.")));
+
+    if (declared != projected)
+        ereport(ERROR,
+                (errcode(ERRCODE_DATATYPE_MISMATCH),
+                 errmsg("Liquid query projects %d column%s but SQL record type declares %d",
+                        projected,
+                        projected == 1 ? "" : "s",
+                        declared),
+                 errhint("Declare exactly the projected Liquid variables in the `AS t(...)` column list.")));
+}
+
 static Datum
 liquid_query_internal(FunctionCallInfo fcinfo,
                       int program_arg_index,
@@ -606,6 +631,13 @@ liquid_query_internal(FunctionCallInfo fcinfo,
                 (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
                  errmsg("function returning record called in context that cannot accept type record")));
 
+    if (rsinfo->expectedDesc == NULL)
+        ereport(ERROR,
+                (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                 errmsg("function returning record called without an expected row type")));
+
+    tupdesc = rsinfo->expectedDesc;
+
     per_query_ctx = rsinfo->econtext
         ? rsinfo->econtext->ecxt_per_query_memory
         : CurrentMemoryContext;
@@ -620,6 +652,7 @@ liquid_query_internal(FunctionCallInfo fcinfo,
 
     program = parse_liquid_program(program_text);
     plan = compile_liquid_execution_plan(program, per_query_ctx);
+    validate_query_output_arity(plan, result_desc);
 
     memset(&edge_batch, 0, sizeof(edge_batch));
     edge_batch.mcxt = per_query_ctx;
