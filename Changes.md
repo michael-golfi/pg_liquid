@@ -1,5 +1,9 @@
 # Changes
 
+## 0.1.7
+
+- automated patch release on 2026-03-27
+
 ## 0.1.6
 
 - automated patch release on 2026-03-26

@@ -1,6 +1,6 @@
 # pg_liquid extension control file
 comment = 'Liquid-inspired Datalog graph query extension for PostgreSQL'
-default_version = '0.1.6'
+default_version = '0.1.7'
 module_pathname = '$libdir/pg_liquid'
 relocatable = false
 superuser = false
