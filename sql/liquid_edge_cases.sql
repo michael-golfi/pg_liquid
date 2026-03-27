@@ -373,6 +373,52 @@ Email_x@(user="root", domain="x.example").
 Email_@(cid=cid, user=account_user, domain=domain)?
 $$) as t(cid text, account_user text, domain text);
 
+select count(*) as fresh_rule_constant_count
+from liquid.query($$
+Edge("seed/source", "seed/p", "seed/target").
+FreshLiteral("__fresh_rule_literal__") :- Edge("seed/source", "seed/p", "seed/target").
+FreshLiteral(result)?
+$$) as t(result text);
+
+do $$
+begin
+  begin
+    perform *
+    from liquid.query($liquid$
+Edge("arity/source", "arity/p", "arity/object").
+Edge("arity/source", "arity/p", object_literal)?
+$liquid$) as t(object_literal text, extra_column text);
+    raise exception 'expected wide output arity rejection';
+  exception
+    when datatype_mismatch then
+      raise notice 'wide output arity rejected';
+  end;
+
+  begin
+    perform *
+    from liquid.query($liquid$
+Edge("arity/source", "arity/p", "arity/object").
+Edge(subject_literal, predicate_literal, object_literal)?
+$liquid$) as t(subject_literal text, predicate_literal text);
+    raise exception 'expected narrow output arity rejection';
+  exception
+    when datatype_mismatch then
+      raise notice 'narrow output arity rejected';
+  end;
+
+  begin
+    perform *
+    from liquid.query($liquid$
+Edge("arity/source", "arity/p", "arity/object").
+Edge("arity/source", "arity/p", _)?
+$liquid$) as t(dummy text);
+    raise exception 'expected zero-output query rejection';
+  exception
+    when invalid_parameter_value then
+      raise notice 'zero-output query rejected';
+  end;
+end $$;
+
 do $$
 declare
   program text;
