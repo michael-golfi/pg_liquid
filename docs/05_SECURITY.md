@@ -132,11 +132,13 @@ granting only `EXECUTE` on `liquid.read_as(...)`.
 
 ## Trust Boundary Notes
 
-`pg_liquid.policy_principal` is caller-supplied session context, not an
-authenticated identity boundary on its own.
+`pg_liquid.policy_principal` is an internal privileged execution carrier, not
+an authenticated application-facing identity boundary on its own.
 
-If a direct SQL client can `SET` or `RESET pg_liquid.policy_principal`, it can
-impersonate another principal or disable CLS entirely for `liquid.query(...)`.
+Direct SQL clients should not be granted the ability to `SET` or `RESET`
+`pg_liquid.policy_principal`. Least-privilege reader roles should instead use
+`liquid.read_as(...)`, and trusted write-capable server code should bind
+principal context through `liquid.query_as(...)`.
 
 For AI or end-user scoped access, treat `pg_liquid` as a filtering engine behind
 a trusted application boundary. Do not assume direct SQL access plus

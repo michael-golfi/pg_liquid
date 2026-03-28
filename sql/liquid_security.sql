@@ -68,6 +68,14 @@ select has_function_privilege('liquid_reader', 'liquid.query_as(text, text)', 'e
 
 set role liquid_reader;
 
+do $$
+begin
+  execute 'set pg_liquid.policy_principal = ''liquid_bob''';
+exception
+  when insufficient_privilege then
+    raise notice 'policy_principal_set_rejected';
+end $$;
+
 select subject_literal,
        object_literal
 from liquid.read_as('liquid_alice', $$

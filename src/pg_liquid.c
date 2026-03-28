@@ -751,12 +751,12 @@ _PG_init(void)
                             NULL);
 
     DefineCustomStringVariable("pg_liquid.policy_principal",
-                               "Session principal used for Liquid CLS policy checks. "
+                               "Privileged session principal used for Liquid CLS policy checks. "
                                "When unset, Liquid CLS filtering is disabled.",
                                NULL,
                                &pg_liquid_policy_principal,
                                NULL,
-                               PGC_USERSET,
+                               PGC_SUSET,
                                0,
                                NULL,
                                NULL,

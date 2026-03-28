@@ -87,9 +87,9 @@ That means the privilege model is:
 - trusted write-capable server code: `liquid.query_as(text, text)` or `liquid.query(text)` with the needed internal privileges
 - operator workflows: normalizer management and maintenance sessions stay privileged
 
-`pg_liquid.policy_principal` is still caller-controlled session state. A direct
-SQL client that can `SET` or `RESET` it can impersonate another principal or
-disable CLS filtering for `liquid.query(...)`. Prefer `liquid.read_as(...)` or
+`pg_liquid.policy_principal` is a privileged maintenance setting, not an
+application-facing access-control surface. Least-privilege direct SQL roles
+should not be able to `SET` or `RESET` it. Prefer `liquid.read_as(...)` or
 `liquid.query_as(...)` instead of exposing raw GUC management to application
 code.
 
@@ -122,8 +122,8 @@ or any inherited `liquid/acts_for` ancestor, and rejects top-level assertions.
 `liquid.query_as(...)` remains available for trusted write-capable wrappers that
 need to seed or mutate Liquid state before querying.
 
-`pg_liquid.policy_principal` remains available for privileged maintenance or
-manual operator sessions:
+`pg_liquid.policy_principal` remains available only for privileged maintenance
+or manual operator sessions:
 
 ```sql
 set pg_liquid.policy_principal = 'user:alice';
