@@ -40,7 +40,7 @@ BENCH_GUARD_RUNS ?= 7
 BENCH_GUARD_BASELINE ?= $(srcdir)/.bench/guard_baseline.tsv
 EXTRA_CLEAN += $(EXTENSION).control $(DEPS)
 
-REGRESS = liquid_blog liquid_edge_cases liquid_normalizers liquid_upgrade liquid_security liquid_ai_context liquid_policy_model liquid_agent_memory liquid_memories_policies liquid_ontology_agent_workflows
+REGRESS = liquid_blog liquid_edge_cases liquid_normalizers liquid_upgrade liquid_security liquid_ai_context liquid_policy_model liquid_agent_memory liquid_conversation_memory liquid_memories_policies liquid_ontology_agent_workflows
 
 bench:
 	psql "$(BENCH_DB)" -v ON_ERROR_STOP=1 -f $(srcdir)/sql/liquid_bench.sql

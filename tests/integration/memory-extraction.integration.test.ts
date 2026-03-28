@@ -24,6 +24,59 @@ describe('integration: memory extraction write surface', () => {
     await destroyIsolatedPgLiquidDb(db);
   });
 
+  it('bootstraps conversation turn and episode compounds behind the canonical user-scoped read model', async () => {
+    await db.sql`select liquid._ensure_memory_extraction_schema()`;
+
+    await db.sql`
+      select count(*)
+      from liquid.query(
+        ${joinProgram([
+          'Edge("session:alice-mobile", "liquid/acts_for", "user:alice").',
+          'Edge("session:bob-mobile", "liquid/acts_for", "user:bob").',
+          'ConversationTurn@(user="user:alice", conversation_id="thread-1", turn_id="turn-1").',
+          'ConversationTurn@(user="user:bob", conversation_id="thread-2", turn_id="turn-2").',
+          'ConversationEpisode@(user="user:alice", conversation_id="thread-1", episode_id="episode-1").',
+          'ConversationEpisode@(user="user:bob", conversation_id="thread-2", episode_id="episode-2").',
+          'ConversationEpisode@(cid=cid, user=user_id, conversation_id=conversation_id, episode_id=episode_id)?',
+        ])}
+      ) as t(cid text, user_id text, conversation_id text, episode_id text)
+    `;
+
+    const aliceTurns = await db.sql<Array<{ conversation_id: string; turn_id: string }>>`
+      select conversation_id, turn_id
+      from liquid.read_as(
+        'session:alice-mobile',
+        ${joinProgram([
+          'ConversationTurn@(cid=cid, user="user:alice", conversation_id=conversation_id, turn_id=turn_id)?',
+        ])}
+      ) as t(cid text, conversation_id text, turn_id text)
+      order by conversation_id, turn_id
+    `;
+    const aliceEpisodes = await db.sql<Array<{ conversation_id: string; episode_id: string }>>`
+      select conversation_id, episode_id
+      from liquid.read_as(
+        'session:alice-mobile',
+        ${joinProgram([
+          'ConversationEpisode@(cid=cid, user="user:alice", conversation_id=conversation_id, episode_id=episode_id)?',
+        ])}
+      ) as t(cid text, conversation_id text, episode_id text)
+      order by conversation_id, episode_id
+    `;
+    const bobVisibleAliceTurns = await db.sql<Array<{ turn_id: string }>>`
+      select turn_id
+      from liquid.read_as(
+        'session:bob-mobile',
+        ${joinProgram([
+          'ConversationTurn@(cid=cid, user="user:alice", conversation_id=conversation_id, turn_id=turn_id)?',
+        ])}
+      ) as t(cid text, conversation_id text, turn_id text)
+    `;
+
+    expect(aliceTurns).toEqual([{ conversation_id: 'thread-1', turn_id: 'turn-1' }]);
+    expect(aliceEpisodes).toEqual([{ conversation_id: 'thread-1', episode_id: 'episode-1' }]);
+    expect(bobVisibleAliceTurns).toEqual([]);
+  });
+
   it('applies profile and conversation memory batches with deterministic update and retract semantics', async () => {
     await db.sql`
       select liquid.apply_memory_extraction(

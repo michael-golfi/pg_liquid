@@ -354,6 +354,16 @@ DefCompound("ExtractorRun", "run_id", "0", "liquid/string").
 DefCompound("ExtractorRun", "thread_id", "0", "liquid/string").
 Edge("ExtractorRun", "liquid/mutable", "false").
 
+DefCompound("ConversationTurn", "conversation_id", "0", "liquid/string").
+DefCompound("ConversationTurn", "turn_id", "0", "liquid/string").
+DefCompound("ConversationTurn", "user", "0", "liquid/string").
+Edge("ConversationTurn", "liquid/mutable", "false").
+
+DefCompound("ConversationEpisode", "conversation_id", "0", "liquid/string").
+DefCompound("ConversationEpisode", "episode_id", "0", "liquid/string").
+DefCompound("ConversationEpisode", "user", "0", "liquid/string").
+Edge("ConversationEpisode", "liquid/mutable", "false").
+
 DefCompound("ProfileMemory", "memory_key", "0", "liquid/string").
 DefCompound("ProfileMemory", "user", "0", "liquid/string").
 Edge("ProfileMemory", "liquid/mutable", "false").
@@ -368,6 +378,8 @@ DefCompound("MemorySupport", "run_id", "0", "liquid/string").
 DefCompound("MemorySupport", "support_ref", "0", "liquid/string").
 Edge("MemorySupport", "liquid/mutable", "false").
 
+CompoundReadByRole@(compound_type="ConversationTurn", role="user").
+CompoundReadByRole@(compound_type="ConversationEpisode", role="user").
 CompoundReadByRole@(compound_type="ProfileMemory", role="user").
 CompoundReadByRole@(compound_type="ConversationMemory", role="user").
 $liquid$) as t(ignored text);

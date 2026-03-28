@@ -1,3 +1,5 @@
+set client_min_messages = warning;
+
 drop extension if exists pg_liquid cascade;
 
 create extension pg_liquid;
