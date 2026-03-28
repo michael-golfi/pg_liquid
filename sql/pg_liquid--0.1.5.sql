@@ -338,6 +338,241 @@ begin
 end;
 $$;
 
+create or replace function liquid._ensure_memory_extraction_schema()
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+begin
+  perform *
+  from liquid.query($liquid$
+DefCompound("ExtractorRun", "observed_at", "0", "liquid/string").
+DefCompound("ExtractorRun", "principal", "0", "liquid/string").
+DefCompound("ExtractorRun", "run_id", "0", "liquid/string").
+DefCompound("ExtractorRun", "thread_id", "0", "liquid/string").
+Edge("ExtractorRun", "liquid/mutable", "false").
+
+DefCompound("ProfileMemory", "memory_key", "0", "liquid/string").
+DefCompound("ProfileMemory", "user", "0", "liquid/string").
+Edge("ProfileMemory", "liquid/mutable", "false").
+
+DefCompound("ConversationMemory", "conversation_id", "0", "liquid/string").
+DefCompound("ConversationMemory", "memory_key", "0", "liquid/string").
+DefCompound("ConversationMemory", "user", "0", "liquid/string").
+Edge("ConversationMemory", "liquid/mutable", "false").
+
+DefCompound("MemorySupport", "memory_literal", "0", "liquid/string").
+DefCompound("MemorySupport", "run_id", "0", "liquid/string").
+DefCompound("MemorySupport", "support_ref", "0", "liquid/string").
+Edge("MemorySupport", "liquid/mutable", "false").
+
+CompoundReadByRole@(compound_type="ProfileMemory", role="user").
+CompoundReadByRole@(compound_type="ConversationMemory", role="user").
+$liquid$) as t(ignored text);
+exception
+  when invalid_parameter_value then
+    null;
+end;
+$$;
+
+create or replace function liquid._ensure_compound_instance(p_compound_type text, p_role_values jsonb)
+returns text
+language plpgsql
+volatile
+strict
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+declare
+  projected record;
+  compound_literal text;
+begin
+  compound_literal := liquid.compound_identity_literal(p_compound_type, p_role_values);
+
+  for projected in
+    select *
+    from liquid.project_compound_edges(p_compound_type, p_role_values)
+  loop
+    perform liquid._ensure_edge(projected.subject_literal, projected.predicate_literal, projected.object_literal);
+  end loop;
+
+  return compound_literal;
+end;
+$$;
+
+create or replace function liquid._clear_memory_state(memory_literal text)
+returns void
+language plpgsql
+volatile
+strict
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+declare
+  current_edge record;
+begin
+  for current_edge in
+    select predicate_v.literal as predicate_literal,
+           object_v.literal as object_literal
+    from liquid.vertices subject_v
+    join liquid.edges edge
+      on edge.subject_id = subject_v.id
+     and edge.is_deleted = false
+    join liquid.vertices predicate_v
+      on predicate_v.id = edge.predicate_id
+    join liquid.vertices object_v
+      on object_v.id = edge.object_id
+    where subject_v.literal = memory_literal
+      and predicate_v.literal in (
+        'liquid/memory_confidence',
+        'liquid/memory_run_id',
+        'liquid/memory_scope',
+        'liquid/memory_status',
+        'liquid/memory_value'
+      )
+  loop
+    perform liquid._tombstone_edge(memory_literal, current_edge.predicate_literal, current_edge.object_literal);
+  end loop;
+end;
+$$;
+
+create or replace function liquid.apply_memory_extraction(principal text, payload jsonb)
+returns void
+language plpgsql
+volatile
+strict
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+declare
+  run_id text;
+  thread_id text;
+  observed_at text;
+  memory jsonb;
+  scope_literal text;
+  user_id text;
+  conversation_id text;
+  memory_key text;
+  memory_value text;
+  support_ref text;
+  operation_literal text;
+  confidence_literal text;
+  run_literal text;
+  memory_literal text;
+begin
+  if jsonb_typeof(payload) <> 'object' then
+    raise exception 'memory extraction payload must be a JSON object';
+  end if;
+
+  run_id := nullif(btrim(payload ->> 'runId'), '');
+  thread_id := nullif(btrim(payload ->> 'threadId'), '');
+  observed_at := nullif(btrim(payload ->> 'observedAt'), '');
+
+  if nullif(btrim(principal), '') is null then
+    raise exception 'principal is required';
+  end if;
+  if run_id is null then
+    raise exception 'payload.runId is required';
+  end if;
+  if thread_id is null then
+    raise exception 'payload.threadId is required';
+  end if;
+  if observed_at is null then
+    raise exception 'payload.observedAt is required';
+  end if;
+  if jsonb_typeof(payload -> 'memories') <> 'array' then
+    raise exception 'payload.memories must be a JSON array';
+  end if;
+
+  perform liquid._ensure_memory_extraction_schema();
+
+  run_literal := liquid._ensure_compound_instance(
+    'ExtractorRun',
+    jsonb_build_object(
+      'observed_at', observed_at,
+      'principal', principal,
+      'run_id', run_id,
+      'thread_id', thread_id
+    )
+  );
+
+  foreach memory in array array(select jsonb_array_elements(payload -> 'memories'))
+  loop
+    if jsonb_typeof(memory) <> 'object' then
+      raise exception 'each memory extraction entry must be a JSON object';
+    end if;
+
+    scope_literal := nullif(btrim(memory ->> 'scope'), '');
+    user_id := nullif(btrim(memory ->> 'userId'), '');
+    conversation_id := nullif(btrim(memory ->> 'conversationId'), '');
+    memory_key := nullif(btrim(memory ->> 'memoryKey'), '');
+    memory_value := nullif(memory ->> 'memoryValue', '');
+    support_ref := nullif(btrim(memory ->> 'supportRef'), '');
+    operation_literal := coalesce(nullif(btrim(memory ->> 'operation'), ''), 'upsert');
+    confidence_literal := nullif(btrim(memory ->> 'confidence'), '');
+
+    if scope_literal not in ('profile', 'conversation') then
+      raise exception 'memory scope must be profile or conversation';
+    end if;
+    if user_id is null then
+      raise exception 'memory.userId is required';
+    end if;
+    if memory_key is null then
+      raise exception 'memory.memoryKey is required';
+    end if;
+    if support_ref is null then
+      raise exception 'memory.supportRef is required';
+    end if;
+    if operation_literal not in ('upsert', 'retract') then
+      raise exception 'memory.operation must be upsert or retract';
+    end if;
+    if scope_literal = 'conversation' and conversation_id is null then
+      raise exception 'memory.conversationId is required for conversation memory';
+    end if;
+    if operation_literal = 'upsert' and memory_value is null then
+      raise exception 'memory.memoryValue is required for upsert';
+    end if;
+
+    memory_literal := liquid._ensure_compound_instance(
+      case when scope_literal = 'profile' then 'ProfileMemory' else 'ConversationMemory' end,
+      case
+        when scope_literal = 'profile' then
+          jsonb_build_object('memory_key', memory_key, 'user', user_id)
+        else
+          jsonb_build_object('conversation_id', conversation_id, 'memory_key', memory_key, 'user', user_id)
+      end
+    );
+
+    perform liquid._clear_memory_state(memory_literal);
+
+    perform liquid._ensure_edge(memory_literal, 'liquid/memory_scope', scope_literal);
+    perform liquid._ensure_edge(memory_literal, 'liquid/memory_run_id', run_id);
+
+    if operation_literal = 'upsert' then
+      perform liquid._ensure_edge(memory_literal, 'liquid/memory_status', 'active');
+      perform liquid._ensure_edge(memory_literal, 'liquid/memory_value', memory_value);
+      if confidence_literal is not null then
+        perform liquid._ensure_edge(memory_literal, 'liquid/memory_confidence', confidence_literal);
+      end if;
+    else
+      perform liquid._ensure_edge(memory_literal, 'liquid/memory_status', 'retracted');
+    end if;
+
+    perform liquid._ensure_compound_instance(
+      'MemorySupport',
+      jsonb_build_object(
+        'memory_literal', memory_literal,
+        'run_id', run_id,
+        'support_ref', support_ref
+      )
+    );
+    perform liquid._ensure_edge(memory_literal, 'liquid/memory_support_run', run_literal);
+  end loop;
+end;
+$$;
+
 create or replace function liquid._build_source_row_key(row_data jsonb, primary_key_columns text[])
 returns jsonb
 language plpgsql
