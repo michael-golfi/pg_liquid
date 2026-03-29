@@ -380,6 +380,36 @@ FreshLiteral("__fresh_rule_literal__") :- Edge("seed/source", "seed/p", "seed/ta
 FreshLiteral(result)?
 $$) as t(result text);
 
+select ancestor_class
+from liquid.query($$
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch1").
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch2").
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch3").
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch4").
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch5").
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch6").
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch7").
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch8").
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch9").
+Edge("class/ApiReference", "onto/subclass_of", "class/Branch10").
+Edge("class/Branch1", "onto/subclass_of", "class/Thing").
+Edge("class/Branch2", "onto/subclass_of", "class/Thing").
+Edge("class/Branch3", "onto/subclass_of", "class/Thing").
+Edge("class/Branch4", "onto/subclass_of", "class/Thing").
+Edge("class/Branch5", "onto/subclass_of", "class/Thing").
+Edge("class/Branch6", "onto/subclass_of", "class/Thing").
+Edge("class/Branch7", "onto/subclass_of", "class/Thing").
+Edge("class/Branch8", "onto/subclass_of", "class/Thing").
+Edge("class/Branch9", "onto/subclass_of", "class/Thing").
+Edge("class/Branch10", "onto/subclass_of", "class/Thing").
+ClassAncestor(child_class, parent_class) :- Edge(child_class, "onto/subclass_of", parent_class).
+ClassAncestor(child_class, ancestor_class) :-
+  Edge(child_class, "onto/subclass_of", parent_class),
+  ClassAncestor(parent_class, ancestor_class).
+ClassAncestor("class/ApiReference", ancestor_class)?
+$$) as t(ancestor_class text)
+order by ancestor_class;
+
 do $$
 begin
   begin

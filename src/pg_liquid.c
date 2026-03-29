@@ -539,13 +539,15 @@ materialize_results(LiquidExecutionPlan *plan,
                     MemoryContext per_query_ctx,
                     Tuplestorestate *tstore)
 {
-    ListCell *lc;
     HTAB     *literal_cache = create_literal_cache(per_query_ctx);
     MemoryContext oldcxt = MemoryContextSwitchTo(per_query_ctx);
+    int frontier_index;
 
-    foreach(lc, lss->current_frontier)
+    for (frontier_index = 0;
+         frontier_index < lss->current_frontier.count;
+         frontier_index++)
     {
-        LiquidBinding *binding = (LiquidBinding *) lfirst(lc);
+        LiquidBinding *binding = lss->current_frontier.items[frontier_index];
         Datum          values[MAX_DATALOG_VARS];
         bool           nulls[MAX_DATALOG_VARS];
         int            natts = tdesc->natts;
@@ -694,9 +696,10 @@ liquid_query_internal(FunctionCallInfo fcinfo,
         lss->atom_state = MemoryContextAllocZero(lss->solver_context,
                                                  sizeof(LiquidAtomExecState) *
                                                  Max(1, plan->atom_count));
-        lss->current_frontier = list_make1(MemoryContextAllocZero(lss->solver_context,
-                                                                  sizeof(LiquidBinding)));
-        lss->current_frontier_size = 1;
+        liquid_binding_frontier_append(&lss->current_frontier,
+                                       lss->solver_context,
+                                       MemoryContextAllocZero(lss->solver_context,
+                                                              sizeof(LiquidBinding)));
         if (forced_principal != NULL)
         {
             lss->policy_context.principal_literal = pstrdup(forced_principal);

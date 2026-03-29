@@ -114,6 +114,62 @@ typedef struct LiquidBinding
     bool    is_bound[MAX_DATALOG_VARS];
 } LiquidBinding;
 
+typedef struct LiquidBindingFrontier
+{
+    LiquidBinding **items;
+    int             count;
+    int             capacity;
+} LiquidBindingFrontier;
+
+static inline void
+liquid_binding_frontier_reserve(LiquidBindingFrontier *frontier,
+                                MemoryContext mcxt,
+                                int min_capacity)
+{
+    int            new_capacity;
+    MemoryContext  oldcxt;
+
+    if (min_capacity <= frontier->capacity)
+        return;
+
+    new_capacity = Max(8, frontier->capacity);
+    while (new_capacity < min_capacity)
+        new_capacity *= 2;
+
+    oldcxt = MemoryContextSwitchTo(mcxt);
+    if (frontier->items == NULL)
+        frontier->items = MemoryContextAlloc(mcxt,
+                                             sizeof(LiquidBinding *) * new_capacity);
+    else
+        frontier->items = repalloc(frontier->items,
+                                   sizeof(LiquidBinding *) * new_capacity);
+    frontier->capacity = new_capacity;
+    MemoryContextSwitchTo(oldcxt);
+}
+
+static inline void
+liquid_binding_frontier_append(LiquidBindingFrontier *frontier,
+                               MemoryContext mcxt,
+                               LiquidBinding *binding)
+{
+    liquid_binding_frontier_reserve(frontier, mcxt, frontier->count + 1);
+    frontier->items[frontier->count++] = binding;
+}
+
+static inline bool
+liquid_binding_frontier_is_empty(const LiquidBindingFrontier *frontier)
+{
+    return frontier == NULL || frontier->count == 0;
+}
+
+static inline LiquidBinding *
+liquid_binding_frontier_first(const LiquidBindingFrontier *frontier)
+{
+    if (liquid_binding_frontier_is_empty(frontier))
+        return NULL;
+    return frontier->items[0];
+}
+
 typedef struct LiquidCompiledTerm
 {
     int64   id;
@@ -273,8 +329,7 @@ typedef struct LiquidScanState
     TupleDesc       result_desc;
 
     MemoryContext   solver_context;
-    List           *current_frontier;   /* List of LiquidBinding* */
-    int             current_frontier_size;
+    LiquidBindingFrontier current_frontier;
     bool            execution_done;
 
     LiquidCompiledRule **rules;

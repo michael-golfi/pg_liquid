@@ -1652,7 +1652,7 @@ estimate_atom_cost(LiquidScanState *lss, LiquidCompiledAtom *atom,
      * be evaluated once per frontier binding).  Scale accordingly so the
      * planner picks cheaper atoms first when the frontier grows.
      */
-    frontier_size = lss->current_frontier_size;
+    frontier_size = lss->current_frontier.count;
     if (frontier_size > 1)
         selectivity *= (double) frontier_size;
 
@@ -1672,8 +1672,7 @@ try_append_binding(LiquidScanState *lss,
                    LiquidBinding *base_binding,
                    int64 *row_vals,
                    HTAB *dedup_htab,
-                   List **next_frontier,
-                   int *next_frontier_size)
+                   LiquidBindingFrontier *next_frontier)
 {
     LiquidBinding  tmp;
     LiquidBinding *nb;
@@ -1710,9 +1709,9 @@ try_append_binding(LiquidScanState *lss,
         oldcxt = MemoryContextSwitchTo(lss->solver_context);
         nb = MemoryContextAlloc(lss->solver_context, sizeof(LiquidBinding));
         memcpy(nb, &tmp, sizeof(LiquidBinding));
-        *next_frontier = lappend(*next_frontier, nb);
-        if (next_frontier_size != NULL)
-            (*next_frontier_size)++;
+        liquid_binding_frontier_append(next_frontier,
+                                       lss->solver_context,
+                                       nb);
         MemoryContextSwitchTo(oldcxt);
     }
 }
@@ -1723,8 +1722,7 @@ typedef struct EdgeBindingContext
     LiquidCompiledAtom *atom;
     LiquidBinding   *binding;
     HTAB            *dedup_htab;
-    List           **next_frontier;
-    int             *next_frontier_size;
+    LiquidBindingFrontier *next_frontier;
 } EdgeBindingContext;
 
 static void
@@ -1742,8 +1740,7 @@ append_edge_binding(EdgeCacheRow *row, void *ctx)
                        binding_ctx->binding,
                        row_vals,
                        binding_ctx->dedup_htab,
-                       binding_ctx->next_frontier,
-                       binding_ctx->next_frontier_size);
+                       binding_ctx->next_frontier);
 }
 
 static void
@@ -1761,8 +1758,7 @@ append_scan_fact_binding(int64 s_id, int64 p_id, int64 o_id, void *ctx)
                        binding_ctx->binding,
                        row_vals,
                        binding_ctx->dedup_htab,
-                       binding_ctx->next_frontier,
-                       binding_ctx->next_frontier_size);
+                       binding_ctx->next_frontier);
 }
 
 typedef struct CompoundBindingContext
@@ -1771,8 +1767,7 @@ typedef struct CompoundBindingContext
     LiquidCompiledAtom *atom;
     LiquidBinding   *binding;
     HTAB            *dedup_htab;
-    List           **next_frontier;
-    int             *next_frontier_size;
+    LiquidBindingFrontier *next_frontier;
 } CompoundBindingContext;
 
 static void
@@ -1785,8 +1780,7 @@ append_compound_binding(LiquidCompiledAtom *atom, int64 *row_values, void *ctx)
                        binding_ctx->binding,
                        row_values,
                        binding_ctx->dedup_htab,
-                       binding_ctx->next_frontier,
-                       binding_ctx->next_frontier_size);
+                       binding_ctx->next_frontier);
 }
 
 static void
@@ -1794,17 +1788,14 @@ solver_step(LiquidScanState *lss)
 {
     LiquidCompiledAtom *best_atom = NULL;
     double         min_cost  = 1e30;
-    List          *next_frontier = NIL;
-    int            next_frontier_size = 0;
+    LiquidBindingFrontier next_frontier = {0};
     HTAB          *dedup_htab;
     MemoryContext  oldcxt;
     MemoryContext  step_context;
     int            constraint_index;
-    ListCell      *lc;
+    int            frontier_index;
 
-    LiquidBinding *sample = (lss->current_frontier != NIL)
-        ? (LiquidBinding *) linitial(lss->current_frontier)
-        : NULL;
+    LiquidBinding *sample = liquid_binding_frontier_first(&lss->current_frontier);
 
     for (constraint_index = 0; constraint_index < lss->constraint_count; constraint_index++)
     {
@@ -1830,9 +1821,11 @@ solver_step(LiquidScanState *lss)
 
     dedup_htab = create_binding_htab(step_context);
 
-    foreach(lc, lss->current_frontier)
+    for (frontier_index = 0;
+         frontier_index < lss->current_frontier.count;
+         frontier_index++)
     {
-        LiquidBinding  *b = (LiquidBinding *) lfirst(lc);
+        LiquidBinding  *b = lss->current_frontier.items[frontier_index];
         int64           scan_vals[MAX_DATALOG_VARS];
         int             i;
         List           *scan_res = NIL;
@@ -1871,7 +1864,6 @@ solver_step(LiquidScanState *lss)
                 ctx.binding = b;
                 ctx.dedup_htab = dedup_htab;
                 ctx.next_frontier = &next_frontier;
-                ctx.next_frontier_size = &next_frontier_size;
 
                 scan_edge_cache_visit(lss->edge_cache,
                                       scan_vals[0],
@@ -1890,7 +1882,6 @@ solver_step(LiquidScanState *lss)
                 ctx.binding = b;
                 ctx.dedup_htab = dedup_htab;
                 ctx.next_frontier = &next_frontier;
-                ctx.next_frontier_size = &next_frontier_size;
 
                 scan_facts_visit(lss,
                                  scan_vals[0],
@@ -1912,7 +1903,6 @@ solver_step(LiquidScanState *lss)
                 ctx.binding = b;
                 ctx.dedup_htab = dedup_htab;
                 ctx.next_frontier = &next_frontier;
-                ctx.next_frontier_size = &next_frontier_size;
 
                 scan_compound_from_edge_cache_visit(lss->edge_cache,
                                                     best_atom,
@@ -1965,8 +1955,7 @@ solver_step(LiquidScanState *lss)
                                            b,
                                            row_vals,
                                            dedup_htab,
-                                           &next_frontier,
-                                           &next_frontier_size);
+                                           &next_frontier);
                 }
 
                 continue;
@@ -2001,8 +1990,7 @@ solver_step(LiquidScanState *lss)
                                b,
                                row_vals,
                                dedup_htab,
-                               &next_frontier,
-                               &next_frontier_size);
+                               &next_frontier);
         }
         list_free(scan_res);
     }
@@ -2010,7 +1998,6 @@ solver_step(LiquidScanState *lss)
 
     MemoryContextSwitchTo(lss->solver_context);
     lss->current_frontier = next_frontier;
-    lss->current_frontier_size = next_frontier_size;
 
     MemoryContextDelete(step_context);
     MemoryContextSwitchTo(oldcxt);
@@ -2704,8 +2691,8 @@ run_rule(LiquidScanState *parent_lss,
          bool *changed)
 {
     LiquidScanState sub_lss;
-    ListCell       *fc;
     int             body_index = 0;
+    int             frontier_index;
     MemoryContext   oldcxt;
 
     memset(&sub_lss, 0, sizeof(LiquidScanState));
@@ -2769,20 +2756,24 @@ run_rule(LiquidScanState *parent_lss,
         MemoryContext sw = MemoryContextSwitchTo(sub_lss.solver_context);
         LiquidBinding *b = MemoryContextAllocZero(sub_lss.solver_context,
                                                   sizeof(LiquidBinding));
-        sub_lss.current_frontier = list_make1(b);
-        sub_lss.current_frontier_size = 1;
+        liquid_binding_frontier_append(&sub_lss.current_frontier,
+                                       sub_lss.solver_context,
+                                       b);
         MemoryContextSwitchTo(sw);
     }
 
     MemoryContextSwitchTo(oldcxt);
 
-    while (!sub_lss.execution_done && sub_lss.current_frontier != NIL)
+    while (!sub_lss.execution_done &&
+           !liquid_binding_frontier_is_empty(&sub_lss.current_frontier))
         solver_step(&sub_lss);
 
     /* Collect newly derived facts */
-    foreach(fc, sub_lss.current_frontier)
+    for (frontier_index = 0;
+         frontier_index < sub_lss.current_frontier.count;
+         frontier_index++)
     {
-        LiquidBinding *b = (LiquidBinding *) lfirst(fc);
+        LiquidBinding *b = sub_lss.current_frontier.items[frontier_index];
 
         emit_derived_fact(parent_lss, rule, b->values, b->is_bound, changed);
     }
@@ -3108,18 +3099,17 @@ run_single_constraint_fast_path(LiquidScanState *lss)
 {
     LiquidCompiledAtom *atom;
     LiquidBinding      *binding;
-    List               *next_frontier = NIL;
-    int                 next_frontier_size = 0;
+    LiquidBindingFrontier next_frontier = {0};
     int64               scan_vals[MAX_DATALOG_VARS];
     int                 i;
     bool                has_unknown = false;
 
     if (lss->constraint_count != 1 ||
-        list_length(lss->current_frontier) != 1)
+        lss->current_frontier.count != 1)
         return false;
 
     atom = lss->constraints[0];
-    binding = (LiquidBinding *) linitial(lss->current_frontier);
+    binding = liquid_binding_frontier_first(&lss->current_frontier);
 
     if (atom_is_satisfied(lss, atom))
     {
@@ -3140,8 +3130,7 @@ run_single_constraint_fast_path(LiquidScanState *lss)
     if (has_unknown)
     {
         atom_set_satisfied(lss, atom, true);
-        lss->current_frontier = NIL;
-        lss->current_frontier_size = 0;
+        lss->current_frontier.count = 0;
         lss->execution_done = true;
         return true;
     }
@@ -3169,7 +3158,6 @@ run_single_constraint_fast_path(LiquidScanState *lss)
             ctx.binding = binding;
             ctx.dedup_htab = NULL;
             ctx.next_frontier = &next_frontier;
-            ctx.next_frontier_size = &next_frontier_size;
 
             scan_edge_cache_visit(lss->edge_cache,
                                   scan_vals[0],
@@ -3187,7 +3175,6 @@ run_single_constraint_fast_path(LiquidScanState *lss)
             ctx.binding = binding;
             ctx.dedup_htab = NULL;
             ctx.next_frontier = &next_frontier;
-            ctx.next_frontier_size = &next_frontier_size;
 
             scan_facts_visit(lss,
                              scan_vals[0],
@@ -3208,7 +3195,6 @@ run_single_constraint_fast_path(LiquidScanState *lss)
             ctx.binding = binding;
             ctx.dedup_htab = NULL;
             ctx.next_frontier = &next_frontier;
-            ctx.next_frontier_size = &next_frontier_size;
 
             scan_compound_from_edge_cache_visit(lss->edge_cache,
                                                 atom,
@@ -3236,8 +3222,7 @@ run_single_constraint_fast_path(LiquidScanState *lss)
                                    binding,
                                    row_vals,
                                    NULL,
-                                   &next_frontier,
-                                   &next_frontier_size);
+                                   &next_frontier);
             }
             list_free(scan_res);
         }
@@ -3280,14 +3265,12 @@ run_single_constraint_fast_path(LiquidScanState *lss)
                                    binding,
                                    row_vals,
                                    NULL,
-                                   &next_frontier,
-                                   &next_frontier_size);
+                                   &next_frontier);
         }
     }
 
     atom_set_satisfied(lss, atom, true);
     lss->current_frontier = next_frontier;
-    lss->current_frontier_size = next_frontier_size;
     lss->execution_done = true;
     return true;
 }
@@ -3318,6 +3301,7 @@ run_solver(LiquidScanState *lss)
     if (run_single_constraint_fast_path(lss))
         return;
 
-    while (!lss->execution_done && lss->current_frontier != NIL)
+    while (!lss->execution_done &&
+           !liquid_binding_frontier_is_empty(&lss->current_frontier))
         solver_step(lss);
 }
