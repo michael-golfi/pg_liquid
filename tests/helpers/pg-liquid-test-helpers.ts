@@ -44,6 +44,24 @@ export async function resetLiquidSchema(sql: Sql): Promise<void> {
   await sql`create extension pg_liquid`;
 }
 
+export async function runSqlFile(
+  dbName: string,
+  sqlPath: string,
+  options?: { readonly tuplesOnly?: boolean; readonly unaligned?: boolean },
+): Promise<string> {
+  const args = ['-X', '-v', 'ON_ERROR_STOP=1'];
+  if (options?.tuplesOnly) {
+    args.push('-t');
+  }
+  if (options?.unaligned) {
+    args.push('-A');
+  }
+  args.push('-d', dbName, '-f', sqlPath);
+
+  const { stdout } = await execFile('psql', args);
+  return stdout.trim();
+}
+
 export function joinProgram(parts: readonly string[]): string {
   return parts
     .map((part) => part.trim())
