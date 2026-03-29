@@ -29,7 +29,7 @@ describe('benchmark: recursive_closure_stress_ms', () => {
   });
 
   it('evaluates deeper transitive closure workloads', async () => {
-    const chainNStress = 140;
+    const chainNStress = 240;
     const predicate = 'org/manages_stress';
     const recursiveProgram = [
       `ManagesReach(x, y) :- Edge(x, "${predicate}", y).`,

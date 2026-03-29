@@ -9,7 +9,7 @@
 \endif
 \if :{?CHAIN_N_STRESS}
 \else
-\set CHAIN_N_STRESS 120
+\set CHAIN_N_STRESS 240
 \endif
 
 drop extension if exists pg_liquid cascade;

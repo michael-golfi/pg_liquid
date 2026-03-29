@@ -64,6 +64,10 @@ The benchmark focuses on:
 - compound lookup
 - installed index inventory
 
+The shipped `bench-check` / CI recursive closure gate uses an `80`-edge
+baseline chain and a `240`-edge stress chain. The manual
+`sql/liquid_bench.sql` smoke path remains separate.
+
 `bench-guard` runs `bench-check` multiple times (default `7`) and compares
 median/p90 metrics against a saved baseline snapshot.
 
@@ -75,6 +79,5 @@ Datalog intent is visible outside SQL orchestration.
 Useful next additions beyond the current audited state:
 
 - malformed-program fuzz cases
-- larger recursive stress fixtures
 - prolonged soak and failure-injection runs
 - production-dataset benchmark baselines

@@ -201,7 +201,7 @@ async function main() {
   const benchDb = process.env.BENCH_DB ?? 'postgres';
   const benchN = asInt(process.env.BENCH_N, 3000);
   const chainN = asInt(process.env.CHAIN_N, 80);
-  const chainNStress = asInt(process.env.CHAIN_N_STRESS, 120);
+  const chainNStress = asInt(process.env.CHAIN_N_STRESS, 240);
   const shortestPathWidth = asInt(process.env.SP_WIDTH, 8);
 
   const sql = openSql(benchDb, 3);
