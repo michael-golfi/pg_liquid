@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := all
+
 DISTDIR := dist
 BUILD_SENTINEL ?= 0
 LEGACY_ARTIFACTS := src/pg_liquid.o src/engine.o src/scan.o src/catalog.o src/parser.o src/assertion_compiler.o \
